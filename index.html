@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FREEKDLE — Adivina el freekrap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0912;
+    --bg-panel:#151226;
+    --bg-panel-2:#1D1A38;
+    --ink:#F4F2FF;
+    --muted:#8E8AB5;
+    --line:#2A2650;
+    --facil:#34D399;
+    --media:#FFD23F;
+    --dificil:#FF7A45;
+    --experto:#FF2E63;
+    --imposible:#B084F5;
+    --accent:#FF7A45;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Manrope',sans-serif;min-height:100vh;}
+  .app{max-width:980px;margin:0 auto;padding:24px 16px 60px;}
+  header{text-align:center;margin-bottom:20px;}
+  .logo{font-family:'Bungee',cursive;font-size:clamp(30px,7vw,44px);color:var(--ink);margin:0;letter-spacing:1px;}
+  .logo span{color:var(--accent);}
+  .tagline{font-family:'Space Mono',monospace;color:var(--muted);font-size:12px;margin:6px 0 0;}
+
+  .center-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;gap:22px;}
+  .spinner{width:36px;height:36px;border:4px solid var(--bg-panel-2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .debug{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);max-height:200px;overflow-y:auto;margin-top:12px;text-align:left;background:var(--bg-panel-2);border-radius:10px;padding:10px;width:100%;max-width:480px;}
+
+  .choice-title{font-family:'Bungee',cursive;font-size:18px;text-align:center;margin:0 0 8px;}
+  .choice-sub{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin:0 0 20px;}
+
+  .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%;max-width:520px;}
+  .cat-tile{
+    aspect-ratio:1/1;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:6px;cursor:pointer;color:#0A0912;font-family:'Bungee',cursive;font-size:12px;line-height:1.3;text-align:center;
+    padding:10px;border:none;box-shadow:0 6px 18px rgba(0,0,0,0.28);transition:transform .12s, box-shadow .12s;
+  }
+  .cat-tile:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 10px 24px rgba(0,0,0,0.35);}
+  .cat-tile .cat-emoji{font-size:28px;}
+  @media (max-width:480px){ .cat-grid{grid-template-columns:repeat(2,1fr);} }
+
+  .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:480px;}
+  .mode-card{
+    background:var(--bg-panel);border:2px solid var(--line);border-radius:18px;padding:24px 16px;
+    cursor:pointer;text-align:center;color:var(--ink);
+  }
+  .mode-card:hover{border-color:var(--accent);}
+  .mode-card .mc-title{font-family:'Bungee',cursive;font-size:15px;margin:0 0 6px;}
+  .mode-card .mc-sub{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);margin:0;}
+  .mode-card.locked{opacity:0.55;}
+  .mode-card.locked .mc-sub{color:var(--accent);}
+
+  .diff-card.locked{opacity:0.5;cursor:default;}
+  .diff-card.locked .dc-tag{color:var(--accent);}
+
+  .diff-grid{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;}
+  .diff-card{
+    border-radius:16px;padding:16px 20px;border:2px solid var(--line);cursor:pointer;
+    background:var(--bg-panel);display:flex;justify-content:space-between;align-items:center;
+  }
+  .diff-card .dc-name{font-family:'Bungee',cursive;font-size:14px;}
+  .diff-card .dc-tag{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);}
+  .backlink{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);cursor:pointer;background:none;border:none;margin-top:14px;}
+
+  .main{flex:1;min-width:0;max-width:640px;margin:0 auto;}
+  .game-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .btn-pill.small{padding:8px 14px;font-size:12px;}
+  .top-tags{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;}
+  .tag-pill{font-family:'Space Mono',monospace;font-size:11px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);}
+  .streak-live{font-family:'Space Mono',monospace;font-weight:700;color:var(--accent);font-size:13px;white-space:nowrap;}
+
+  .card{background:var(--bg-panel);border:1px solid var(--line);border-radius:20px;padding:26px 22px;}
+  .progress-track{display:flex;gap:6px;margin-bottom:22px;}
+  .progress-seg{flex:1;height:8px;border-radius:6px;background:var(--bg-panel-2);}
+  .progress-seg.done{background:var(--accent);}
+
+  .play-zone{display:flex;flex-direction:column;align-items:center;margin-bottom:22px;}
+  .play-btn{
+    width:112px;height:112px;border-radius:50%;border:none;cursor:pointer;background:var(--accent);
+    box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 30px color-mix(in srgb, var(--accent) 55%, transparent);
+    display:flex;align-items:center;justify-content:center;transition:transform 0.1s;
+  }
+  .play-btn:active{transform:scale(0.94);}
+  .play-btn:disabled{opacity:0.45;cursor:default;}
+  .play-btn svg{width:32px;height:32px;fill:#120A05;margin-left:5px;}
+  .snippet-label{font-family:'Space Mono',monospace;color:var(--accent);font-size:14px;margin-top:12px;font-weight:700;}
+
+  .guess-box{position:relative;display:flex;gap:8px;margin-bottom:4px;}
+  input[type=text]{flex:1;padding:13px 16px;border-radius:999px;border:1px solid var(--line);background:var(--bg-panel-2);color:var(--ink);font-family:'Manrope',sans-serif;font-size:14px;}
+  input[type=text]:focus{outline:none;border-color:var(--accent);}
+  .btn-pill{padding:13px 22px;border-radius:999px;border:none;font-weight:800;cursor:pointer;font-family:'Manrope',sans-serif;font-size:14px;white-space:nowrap;}
+  .btn-pill.primary{background:var(--accent);color:#1a0c02;}
+  .btn-pill.ghost{background:var(--bg-panel-2);color:var(--ink);border:1px solid var(--line);flex:1;}
+  .dropdown{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:14px;max-height:220px;overflow-y:auto;z-index:5;}
+  .dd-item{padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line);}
+  .dd-item:last-child{border-bottom:none;}
+  .dd-item:hover{background:var(--bg-panel);}
+  .dd-item small{display:block;color:var(--muted);font-family:'Space Mono',monospace;font-size:10px;margin-top:2px;}
+  .err-text{color:var(--experto);font-size:12px;font-family:'Space Mono',monospace;margin:8px 0 0;min-height:14px;}
+
+  .btn-row{display:flex;gap:10px;margin-top:14px;}
+  .guess-history{list-style:none;padding:0;margin:18px 0 0;display:flex;flex-direction:column;gap:6px;}
+  .guess-history li{display:flex;justify-content:space-between;padding:9px 14px;border-radius:12px;background:var(--bg-panel-2);font-size:13px;gap:10px;}
+  .gh-wrong{color:var(--experto);font-weight:800;}
+  .gh-right{color:var(--facil);font-weight:800;white-space:nowrap;}
+
+  .empty-msg{text-align:center;font-family:'Space Mono',monospace;color:var(--muted);font-size:13px;padding:20px 0;}
+
+  .reveal{text-align:center;}
+  .reveal img{width:140px;height:140px;border-radius:16px;margin-bottom:14px;}
+  .reveal h3{font-family:'Bungee',cursive;font-size:18px;margin:0 0 4px;}
+  .reveal p{margin:0 0 4px;color:var(--muted);font-family:'Space Mono',monospace;font-size:12px;}
+  .reveal a{color:var(--accent);}
+  .result-tag{display:inline-block;font-family:'Space Mono',monospace;font-weight:700;font-size:14px;padding:7px 18px;border-radius:999px;margin-bottom:14px;}
+  .tag-win{background:color-mix(in srgb, var(--facil) 22%, transparent);color:var(--facil);}
+  .tag-lose{background:color-mix(in srgb, var(--experto) 22%, transparent);color:var(--experto);}
+  .stats-row{display:flex;justify-content:center;gap:24px;margin:16px 0;font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);}
+  .stats-row b{display:block;font-size:23px;color:var(--ink);font-family:'Manrope',sans-serif;}
+
+  .hidden{display:none !important;}
+  footer{text-align:center;margin-top:24px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);line-height:1.7;}
+
+  .round-done{text-align:center;padding:26px 0 6px;}
+  .round-done .rd-text{font-family:'Space Mono',monospace;color:var(--muted);font-size:13px;margin:0 0 14px;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(6,5,14,0.74);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:60;padding:18px;}
+  .modal-overlay.hidden{display:none;}
+  .modal-box{background:var(--bg-panel);border:1px solid var(--line);border-radius:22px;padding:30px 24px 24px;max-width:380px;width:100%;max-height:88vh;overflow-y:auto;text-align:center;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:modalPop 0.18s ease-out;}
+  @keyframes modalPop{ from{ transform:scale(0.94); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .modal-close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;padding:6px;}
+  .modal-close:hover{color:var(--ink);}
+  .modal-box .reveal img{width:130px;height:130px;border-radius:16px;margin-bottom:14px;}
+  .modal-box .reveal h3{font-family:'Bungee',cursive;font-size:17px;margin:0 0 4px;}
+  .modal-box .reveal p{margin:0 0 4px;color:var(--muted);font-family:'Space Mono',monospace;font-size:12px;}
+  .modal-box .reveal a{color:var(--accent);}
+  .modal-actions{display:flex;flex-direction:column;gap:10px;margin-top:18px;}
+
+  .streak-bars{display:flex;gap:10px;align-items:flex-end;justify-content:center;height:140px;margin:14px 0 8px;overflow-x:auto;padding:4px 6px;}
+  .streak-bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-width:30px;height:100%;}
+  .streak-bar{width:22px;border-radius:7px 7px 2px 2px;background:linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 45%, transparent));box-shadow:0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);}
+  .streak-bar-val{font-family:'Space Mono',monospace;font-size:12px;font-weight:800;color:var(--ink);}
+  .streak-bar-lbl{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);}
+  .section-label{font-family:'Space Mono',monospace;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:0.4px;margin:18px 0 8px;}
+
+  .lost-song{margin:6px 0 4px;}
+  .lost-song .lost-art{width:104px;height:104px;border-radius:16px;margin-bottom:10px;box-shadow:0 8px 20px rgba(0,0,0,0.35);}
+  .lost-song .lost-title{font-family:'Bungee',cursive;font-size:16px;margin:0 0 3px;}
+  .lost-song .lost-artist{font-family:'Space Mono',monospace;color:var(--muted);font-size:12px;margin:0 0 6px;}
+  .lost-song a{color:var(--accent);font-size:12px;font-weight:700;}
+
+  .lock-note{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);text-align:center;margin:16px 0 0;line-height:1.6;}
+  .lock-note b{color:var(--accent);font-size:14px;}
+
+  .gh-songs{max-height:230px;overflow-y:auto;text-align:left;}
+  .gh-songs li{align-items:center;}
+  .gh-thumb{width:40px;height:40px;border-radius:9px;object-fit:cover;flex-shrink:0;}
+  .gh-info{display:flex;flex-direction:column;flex:1;min-width:0;margin-left:2px;}
+  .gh-title{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gh-artist{font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 class="logo">FREEK<span>DLE</span></h1>
+    <p class="tagline">// adivina el freekrap</p>
+  </header>
+
+  <div class="center-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <div class="debug hidden" id="debugLog"></div>
+  </div>
+
+  <div class="center-screen hidden" id="errorScreen">
+    <p style="font-family:'Space Mono',monospace;color:var(--experto);text-align:center;">No pude cargar canciones. Log:</p>
+    <div class="debug" id="debugLog2"></div>
+    <button class="btn-pill primary" id="retryBtn">Reintentar</button>
+  </div>
+
+  <div class="center-screen hidden" id="categoryScreen">
+    <h2 class="choice-title">Elige una categoría</h2>
+    <p class="choice-sub">Un artista o el Mix con todos</p>
+    <div class="cat-grid" id="catGrid"></div>
+  </div>
+
+  <div class="center-screen hidden" id="modeScreen">
+    <h2 class="choice-title">¿Cómo quieres jugar?</h2>
+    <p class="choice-sub" id="modeCatLabel">Elige un modo para empezar</p>
+    <div class="mode-grid">
+      <div class="mode-card" id="pickLibre">
+        <p class="mc-title">🎲 Modo libre</p>
+        <p class="mc-sub">Adivina el máximo de canciones, sin límite</p>
+      </div>
+      <div class="mode-card" id="pickDiario">
+        <p class="mc-title">🔥 Reto diario</p>
+        <p class="mc-sub" id="diarioSub">1 canción por dificultad, 1 vez al día</p>
+      </div>
+    </div>
+    <button class="backlink" id="backToCategory">← Cambiar categoría</button>
+  </div>
+
+  <div class="center-screen hidden" id="diffScreen">
+    <h2 class="choice-title">Elige la dificultad</h2>
+    <div class="diff-grid" id="diffGrid"></div>
+    <button class="backlink" id="backToMode">← Cambiar modo</button>
+  </div>
+
+  <div class="hidden" id="gameScreen">
+    <div class="main">
+      <div class="game-topbar">
+        <button class="btn-pill ghost small" id="menuBtn">← Menú</button>
+        <div class="top-tags">
+          <span class="tag-pill" id="catTag"></span>
+          <span class="tag-pill" id="modeTag"></span>
+          <span class="tag-pill" id="diffTag"></span>
+        </div>
+        <button class="btn-pill ghost small hidden" id="nextDiffBtn">Siguiente dificultad →</button>
+      </div>
+
+      <div class="card" id="gameCard">
+        <div class="streak-live hidden" id="streakLive" style="text-align:center;margin-bottom:10px;"></div>
+        <div class="progress-track" id="progressTrack"></div>
+
+        <div class="play-zone">
+          <button class="play-btn" id="playBtn" aria-label="Reproducir fragmento">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <p class="snippet-label" id="snippetLabel">0.5s</p>
+        </div>
+
+        <div class="guess-box">
+          <input type="text" id="guessInput" placeholder="Busca una canción..." autocomplete="off">
+          <button class="btn-pill primary" id="guessBtn">Adivinar</button>
+          <div class="dropdown hidden" id="dropdown"></div>
+        </div>
+        <p class="err-text" id="errText"></p>
+
+        <div class="btn-row">
+          <button class="btn-pill ghost" id="skipBtn">Saltar</button>
+          <button class="btn-pill ghost" id="giveupBtn">Rendirse</button>
+        </div>
+
+        <ul class="guess-history" id="guessHistory"></ul>
+
+        <div class="round-done hidden" id="roundDone">
+          <p class="rd-text">Ronda terminada.</p>
+          <button class="btn-pill primary" id="reopenModalBtn">Ver resultado</button>
+        </div>
+
+        <div class="empty-msg hidden" id="emptyMsg">No hay canciones en esta categoría/dificultad todavía. Prueba con otra.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer id="footerNote"></footer>
+  <button class="backlink" id="refreshCatalogBtn" style="display:block;margin:6px auto 0;">↻ Actualizar catálogo</button>
+</div>
+
+<div class="modal-overlay hidden" id="resultModal">
+  <div class="modal-box">
+    <button class="modal-close" id="modalCloseBtn" aria-label="Cerrar">×</button>
+    <div class="reveal">
+      <div class="result-tag" id="resultTag"></div>
+      <img id="revealArt" src="" alt="">
+      <h3 id="revealTitle"></h3>
+      <p id="revealArtist"></p>
+      <p><a id="revealLink" href="#" target="_blank" rel="noopener">Escuchar canción completa ↗</a></p>
+      <div class="stats-row">
+        <div><b id="statPlayed">0</b>jugadas</div>
+        <div><b id="statWinPct">0%</b>aciertos</div>
+        <div><b id="statStreak">0</b>racha</div>
+      </div>
+      <p class="lock-note hidden" id="resultLockNote">🔒 Ya jugaste esta dificultad hoy. Vuelve en <b id="resultLockCountdown">--:--:--</b></p>
+      <div class="modal-actions">
+        <button class="btn-pill ghost" id="modalNextDiffBtn">Siguiente dificultad →</button>
+        <button class="btn-pill ghost" id="modalDiffBtn">Elegir dificultad</button>
+        <button class="btn-pill ghost" id="modalMenuBtn">← Volver al menú</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="streakModal">
+  <div class="modal-box">
+    <button class="modal-close" id="streakCloseBtn" aria-label="Cerrar">×</button>
+    <div class="reveal">
+      <div class="result-tag tag-lose">Racha terminada</div>
+      <div class="stats-row">
+        <div><b id="streakFinal">0</b>racha final</div>
+        <div><b id="streakBestNum">0</b>mejor racha</div>
+      </div>
+
+      <div class="lost-song hidden" id="streakLostWrap">
+        <p class="section-label">Perdiste con</p>
+        <img id="streakLostArt" src="" alt="" class="lost-art">
+        <p class="lost-title" id="streakLostTitle"></p>
+        <p class="lost-artist" id="streakLostArtist"></p>
+        <p><a id="streakLostLink" href="#" target="_blank" rel="noopener">Escuchar canción completa ↗</a></p>
+      </div>
+
+      <p class="section-label">Últimos días</p>
+      <div class="streak-bars" id="streakBars"></div>
+
+      <p class="section-label">Canciones adivinadas</p>
+      <ul class="guess-history gh-songs" id="streakSongList"></ul>
+
+      <div class="modal-actions">
+        <button class="btn-pill primary" id="streakRetryBtn">🔁 Intentar de nuevo</button>
+        <button class="btn-pill ghost" id="streakMenuBtn">← Volver al menú</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ARTISTS = [
+  { key:'megar', name:'MegaR', ids:[1516366154], matchKeys:['megar'] },
+  { key:'kballero', name:'Kballero', ids:[1488546856], matchKeys:['kballero'] },
+  { key:'darckstar', name:'DarckStar', ids:[1469584932,1443913037], matchKeys:['darckstar'] },
+  { key:'doblecero', name:'Doble Cero', ids:[1081261526], matchKeys:['doblecero'] },
+  { key:'zeroraps', name:'ZerØ', ids:[1530234574], matchKeys:['zer0'] },
+  { key:'bynmc', name:'BynMc', ids:[1516523295], matchKeys:['bynmc'] },
+  { key:'keyto', name:'KeyTo', ids:[1434742318], matchKeys:['keyto'] },
+  { key:'nyako', name:'Nyako', ids:[1490055376], matchKeys:['nyako'] }
+];
+const CAT_COLORS = {
+  todos:'linear-gradient(135deg,#FF7A45,#FF2E63)',
+  megar:'#34D399', kballero:'#FFD23F', darckstar:'#38BDF8', doblecero:'#FB923C',
+  zeroraps:'#B084F5', bynmc:'#F472B6', keyto:'#A3E635', nyako:'#22D3EE'
+};
+const STOREFRONTS = ['us','co','mx','es','ar'];
+const STOREFRONTS_FALLBACK = ['cl','pe','ec','ve','uy','py','bo','gt','hn','sv','ni','cr','pa','do'];
+
+// Lista manual de bloqueo: títulos (normalizados) de canciones que el
+// catálogo de iTunes vincula por error a un artista equivocado —por
+// ejemplo, por una colisión de ID de artista en algún catálogo regional.
+// Si detectas otra canción que no es de quien dice ser, agrégala aquí
+// con norm('Título exacto de la canción').
+const MANUAL_EXCLUDES = {
+  zeroraps: [norm('Wandering Banshees'), norm('Sale temps pour être pauvre')]
+};
+
+// Para las canciones encontradas en los storefronts "de confianza"
+// (STOREFRONTS) aceptamos coincidencia por ID de artista O por nombre.
+// Para los storefronts de respaldo (STOREFRONTS_FALLBACK) NO confiamos
+// en el ID por sí solo —algunos catálogos regionales reutilizan/cruzan
+// IDs de artista con contenido de otro artista completamente distinto—
+// así que ahí exigimos que el nombre acreditado realmente coincida.
+function trackBelongsToArtist(r, id, matchKeys, trustedStorefront){
+  const belongsById = r.artistId === id;
+  const belongsByName = artistTokensMatch(r.artistName, matchKeys);
+  return trustedStorefront ? (belongsById || belongsByName) : belongsByName;
+}
+const DURATIONS = [500,1000,2000,3000,4000];
+const DIFFS = [
+  {key:'facil', name:'Fácil', color:'var(--facil)'},
+  {key:'media', name:'Media', color:'var(--media)'},
+  {key:'dificil', name:'Difícil', color:'var(--dificil)'},
+  {key:'experto', name:'Experto', color:'var(--experto)'},
+  {key:'imposible', name:'Imposible', color:'var(--imposible)'}
+];
+const STREAK_TIERS = ['facil','media','dificil','experto','imposible'];
+const ANIME_BOOST = ['baki','jujutsu','bluelock','naruto','dragonball','onepiece','kimetsu','demonslayer','shingeki','titan','mha','boku','deku'];
+
+// Almacenamiento persistente vía localStorage (cookies del navegador),
+// para que los datos (catálogo, estadísticas, racha, bloqueo diario)
+// se mantengan aunque el sitio se recargue o se cierre el navegador.
+function lsGet(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(raw === null) return fallback;
+    return JSON.parse(raw);
+  }catch(e){ return fallback; }
+}
+function lsSet(key, value){
+  try{ localStorage.setItem(key, JSON.stringify(value)); return true; }catch(e){ return false; }
+}
+function lsDel(key){ try{ localStorage.removeItem(key); }catch(e){} }
+
+const DAILY_RECENT_KEY = 'freekdle-daily-recent-v1';
+const DAILY_RECENT_MAX = 40;
+function getDailyRecentIds(){ return lsGet(DAILY_RECENT_KEY, []); }
+function pushDailyRecentIds(ids){
+  let list = getDailyRecentIds();
+  list.push(...ids);
+  if(list.length > DAILY_RECENT_MAX) list = list.slice(-DAILY_RECENT_MAX);
+  lsSet(DAILY_RECENT_KEY, list);
+}
+function dailyRecordKey(cat, diff){ return 'freekdle-daily-lock-v2-' + cat + '-' + diff; }
+function getDailyRecord(cat, diff){
+  const rec = lsGet(dailyRecordKey(cat, diff), null);
+  if(!rec || rec.date !== todayStr()) return null;
+  return rec;
+}
+function saveDailyRecord(cat, diff, rec){ lsSet(dailyRecordKey(cat, diff), rec); }
+function nextUnplayedDifficulty(fromKey){
+  const idx = DIFFS.findIndex(d=>d.key===fromKey);
+  for(let i=1;i<=DIFFS.length;i++){
+    const cand = DIFFS[(idx+i)%DIFFS.length];
+    if(!getDailyRecord(category, cand.key)) return cand;
+  }
+  return null;
+}
+
+let pool = [];
+let currentSong = null;
+let attempt = 0;
+let selectedTrack = null;
+let audio = null;
+let playing = false;
+let artistsMissing = [];
+let category = 'todos';
+let difficulty = 'media';
+let mode = 'libre';
+let recentMap = {};
+let streakSongs = [];
+let streakCount = 0;
+
+function norm(s){
+  return (s||'').replace(/[∅øØ]/g,'0').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/gi,'').toLowerCase();
+}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function upscaleArt(url){ return (url||'').replace('100x100bb','400x400bb'); }
+function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))|0; } return Math.abs(h); }
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function log(msg){
+  const el = document.getElementById('debugLog');
+  const line = document.createElement('div');
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = 99999;
+}
+function categoryLabel(key){
+  if(key === 'todos') return 'Mix (todos)';
+  const a = ARTISTS.find(x=>x.key===key);
+  return a ? a.name : key;
+}
+function resetAccent(){ document.body.style.setProperty('--accent', '#FF7A45'); }
+
+// Un track "pertenece" al artista si el artistId de iTunes coincide con el id
+// que consultamos (lo más confiable), o si el nombre de artista acreditado
+// -tokenizado por separadores de colaboración (feat, ft, x, &, etc.)- coincide
+// exactamente con una de las matchKeys. Esto evita que queden canciones que
+// en realidad son de otro artista pero que por azar contenían el texto buscado.
+function artistTokensMatch(artistName, matchKeys){
+  const raw = (artistName || '').split(/,|&|\+|\bfeat\.?\b|\bft\.?\b|\bx\b|\by\b|\bvs\.?\b/i);
+  return raw.some(tok => matchKeys.includes(norm(tok)));
+}
+
+async function lookupArtist(id, country){
+  const cc = country ? ('&country=' + country) : '';
+  const url = 'https://itunes.apple.com/lookup?id=' + id + '&entity=song&limit=200' + cc;
+  try{
+    const res = await fetch(url);
+    if(!res.ok){ log('id ' + id + (country ? ' ['+country+']' : '') + ' HTTP ' + res.status); return []; }
+    const data = await res.json();
+    const tracks = (data.results || []).filter(r => r.wrapperType === 'track');
+    log('id ' + id + (country ? ' ['+country+']' : '') + ': ' + tracks.length + ' tracks crudos');
+    return tracks;
+  }catch(e){
+    log('id ' + id + (country ? ' ['+country+']' : '') + ' ERROR: ' + e.message);
+    return [];
+  }
+}
+
+function assignDifficulty(track){
+  const rd = track.releaseDate ? new Date(track.releaseDate).getTime() : 0;
+  const daysOld = rd ? (Date.now() - rd) / 86400000 : 9999;
+  if(daysOld <= 90) return 'facil';
+  const tiers = ['facil','media','dificil','experto','imposible'];
+  const bucket = hashStr(String(track.id)) % 100;
+  let tier;
+  if(bucket < 15) tier = 'facil';
+  else if(bucket < 45) tier = 'media';
+  else if(bucket < 75) tier = 'dificil';
+  else if(bucket < 92) tier = 'experto';
+  else tier = 'imposible';
+  const t = norm(track.title);
+  if(ANIME_BOOST.some(k => t.includes(k))){
+    const idx = tiers.indexOf(tier);
+    tier = tiers[Math.max(0, idx - 1)];
+  }
+  return tier;
+}
+
+async function buildPool(){
+  pool = [];
+  artistsMissing = [];
+  for(const artist of ARTISTS){
+    let found = [];
+    const seenIds = new Set();
+    const excludeTitles = MANUAL_EXCLUDES[artist.key] || [];
+    for(const id of artist.ids){
+      let idFound = 0;
+      for(const cc of STOREFRONTS){
+        const results = await lookupArtist(id, cc);
+        for(const r of results){
+          if(!r.previewUrl) continue;
+          if(seenIds.has(r.trackId)) continue;
+          if(excludeTitles.includes(norm(r.trackName))) continue;
+          if(!trackBelongsToArtist(r, id, artist.matchKeys, true)) continue;
+          seenIds.add(r.trackId);
+          idFound++;
+          found.push({
+            id:r.trackId, title:r.trackName, artist:r.artistName,
+            artwork:upscaleArt(r.artworkUrl100), preview:r.previewUrl,
+            url:r.trackViewUrl, releaseDate:r.releaseDate,
+            artistKey:artist.key, artistLabel:artist.name
+          });
+        }
+        await sleep(90);
+      }
+      // Si un id de artista no dio ningún resultado en los storefronts
+      // principales, se intenta con una lista más amplia de países antes
+      // de darlo por perdido (evita que un artista quede fuera del juego
+      // por un problema de disponibilidad regional en iTunes). Aquí NO
+      // se confía en el ID por sí solo (ver trackBelongsToArtist).
+      if(idFound === 0){
+        for(const cc of STOREFRONTS_FALLBACK){
+          const results = await lookupArtist(id, cc);
+          for(const r of results){
+            if(!r.previewUrl) continue;
+            if(seenIds.has(r.trackId)) continue;
+            if(excludeTitles.includes(norm(r.trackName))) continue;
+            if(!trackBelongsToArtist(r, id, artist.matchKeys, false)) continue;
+            seenIds.add(r.trackId);
+            idFound++;
+            found.push({
+              id:r.trackId, title:r.trackName, artist:r.artistName,
+              artwork:upscaleArt(r.artworkUrl100), preview:r.previewUrl,
+              url:r.trackViewUrl, releaseDate:r.releaseDate,
+              artistKey:artist.key, artistLabel:artist.name
+            });
+          }
+          await sleep(90);
+        }
+      }
+    }
+    log('>> ' + artist.name + ': ' + found.length + ' canciones');
+    if(found.length){ pool.push(...found); } else { artistsMissing.push(artist.name); }
+  }
+  pool.forEach(t => { t.difficulty = assignDifficulty(t); });
+}
+
+function buildCategoryScreen(){
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = '';
+
+  const mixTile = document.createElement('button');
+  mixTile.className = 'cat-tile';
+  mixTile.style.background = CAT_COLORS.todos;
+  mixTile.innerHTML = '<span class="cat-emoji">🎲</span>Mix (todos)';
+  mixTile.addEventListener('click', ()=>{
+    category = 'todos';
+    document.getElementById('modeCatLabel').textContent = 'Categoría: ' + categoryLabel(category);
+    showScreen('mode');
+  });
+  grid.appendChild(mixTile);
+
+  ARTISTS.forEach(a=>{
+    if(!pool.some(t=>t.artistKey===a.key)) return;
+    const tile = document.createElement('button');
+    tile.className = 'cat-tile';
+    tile.style.background = CAT_COLORS[a.key] || '#8E8AB5';
+    tile.innerHTML = '<span class="cat-emoji">🎤</span>' + a.name;
+    tile.addEventListener('click', ()=>{
+      category = a.key;
+      document.getElementById('modeCatLabel').textContent = 'Categoría: ' + categoryLabel(category);
+      showScreen('mode');
+    });
+    grid.appendChild(tile);
+  });
+}
+
+function buildDiffScreen(){
+  const grid = document.getElementById('diffGrid');
+  grid.innerHTML = '';
+  DIFFS.forEach(d=>{
+    const card = document.createElement('div');
+    card.className = 'diff-card';
+    card.style.borderColor = d.color;
+    const rec = getDailyRecord(category, d.key);
+    if(rec){
+      card.classList.add('locked');
+      card.innerHTML = '<span class="dc-name" style="color:' + d.color + '">' + d.name + '</span><span class="dc-tag">' + (rec.won ? '✅ Jugada' : '❌ Fallada') + ' · ver</span>';
+      card.addEventListener('click', ()=>{ openDiarioLockedRecap(rec); });
+    } else {
+      card.innerHTML = '<span class="dc-name" style="color:' + d.color + '">' + d.name + '</span><span class="dc-tag">Elegir →</span>';
+      card.addEventListener('click', ()=>{
+        difficulty = d.key;
+        document.body.style.setProperty('--accent', d.color);
+        enterGame();
+      });
+    }
+    grid.appendChild(card);
+  });
+}
+
+function filteredPool(){
+  return pool.filter(t => t.difficulty === difficulty && (category === 'todos' || t.artistKey === category));
+}
+
+function buildProgress(){
+  const track = document.getElementById('progressTrack');
+  track.innerHTML = '';
+  DURATIONS.forEach((d,i)=>{
+    const seg = document.createElement('div');
+    seg.className = 'progress-seg';
+    seg.id = 'seg-'+i;
+    track.appendChild(seg);
+  });
+}
+function updateProgress(){
+  DURATIONS.forEach((d,i)=>{
+    document.getElementById('seg-'+i).classList.toggle('done', i < attempt);
+  });
+}
+
+// Memoria anti-repetición: recuerda las últimas canciones mostradas por
+// cada combinación de categoría+dificultad para no repetir la misma
+// canción dos veces seguidas (ni casi seguidas) en modo libre.
+function recentKey(){ return category + '|' + difficulty; }
+function recordRecentSong(id){
+  const k = recentKey();
+  if(!recentMap[k]) recentMap[k] = [];
+  recentMap[k].push(id);
+  const list = filteredPool();
+  const maxMemory = Math.max(1, Math.min(6, list.length - 1));
+  recentMap[k] = recentMap[k].slice(-maxMemory);
+}
+function pickSong(){
+  const list = filteredPool();
+  if(!list.length) return null;
+  const recent = recentMap[recentKey()] || [];
+  let candidates = list.filter(s => !recent.includes(s.id));
+  if(!candidates.length) candidates = list;
+  return candidates[Math.floor(Math.random()*candidates.length)];
+}
+
+function streakTierForCount(n){
+  const idx = Math.min(Math.floor(n/3), STREAK_TIERS.length - 1);
+  return STREAK_TIERS[idx];
+}
+
+function showScreen(name){
+  ['loadingScreen','errorScreen','categoryScreen','modeScreen','diffScreen','gameScreen'].forEach(id=>{
+    document.getElementById(id).classList.add('hidden');
+  });
+  const map = {loading:'loadingScreen', error:'errorScreen', category:'categoryScreen', mode:'modeScreen', diff:'diffScreen', game:'gameScreen'};
+  document.getElementById(map[name]).classList.remove('hidden');
+  if(name === 'mode') refreshDiarioCard();
+  if(name === 'diff') buildDiffScreen();
+}
+
+function enterGame(){
+  document.getElementById('modeTag').textContent = '🔥 Reto diario';
+  document.getElementById('catTag').textContent = categoryLabel(category);
+  document.getElementById('diffTag').textContent = DIFFS.find(d=>d.key===difficulty).name;
+  document.getElementById('nextDiffBtn').classList.remove('hidden');
+  document.getElementById('streakLive').classList.add('hidden');
+  showScreen('game');
+  startRound();
+}
+
+function enterStreakMode(){
+  document.getElementById('modeTag').textContent = '🎲 Modo libre';
+  document.getElementById('catTag').textContent = categoryLabel(category);
+  document.getElementById('diffTag').textContent = 'Dificultad automática';
+  document.getElementById('nextDiffBtn').classList.add('hidden');
+  document.getElementById('streakLive').classList.remove('hidden');
+  showScreen('game');
+  streakSongs = [];
+  streakCount = 0;
+  startStreakRound();
+}
+
+async function startRound(){
+  document.getElementById('emptyMsg').classList.add('hidden');
+  document.getElementById('roundDone').classList.add('hidden');
+  closeResultModal();
+  const list = filteredPool();
+  if(!list.length){
+    document.getElementById('emptyMsg').classList.remove('hidden');
+    ['playBtn','guessInput','guessBtn','skipBtn','giveupBtn'].forEach(id=>document.getElementById(id).disabled = true);
+    return;
+  }
+  currentSong = pickSong();
+  recordRecentSong(currentSong.id);
+  attempt = 0;
+  selectedTrack = null;
+  if(audio) audio.pause();
+  audio = new Audio(currentSong.preview);
+  document.getElementById('guessInput').value = '';
+  const errEl = document.getElementById('errText');
+  errEl.textContent = ''; errEl.style.color = '';
+  document.getElementById('guessHistory').innerHTML = '';
+  document.getElementById('dropdown').classList.add('hidden');
+  ['playBtn','guessInput','guessBtn','skipBtn','giveupBtn'].forEach(id=>document.getElementById(id).disabled = false);
+  buildProgress();
+  updateProgress();
+  document.getElementById('snippetLabel').textContent = (DURATIONS[0]/1000).toFixed(1) + 's';
+}
+
+async function startStreakRound(){
+  document.getElementById('emptyMsg').classList.add('hidden');
+  document.getElementById('roundDone').classList.add('hidden');
+  const tier = streakTierForCount(streakSongs.length);
+  let list = pool.filter(t => (category === 'todos' || t.artistKey === category) && t.difficulty === tier);
+  if(!list.length) list = pool.filter(t => (category === 'todos' || t.artistKey === category));
+  if(!list.length){
+    document.getElementById('emptyMsg').classList.remove('hidden');
+    ['playBtn','guessInput','guessBtn','skipBtn','giveupBtn'].forEach(id=>document.getElementById(id).disabled = true);
+    return;
+  }
+  const usedIds = new Set(streakSongs.map(s=>s.id));
+  const recentIds = new Set(getDailyRecentIds());
+  let candidates = list.filter(s => !usedIds.has(s.id) && !recentIds.has(s.id));
+  if(!candidates.length) candidates = list.filter(s => !usedIds.has(s.id));
+  if(!candidates.length) candidates = list;
+  currentSong = candidates[Math.floor(Math.random()*candidates.length)];
+  attempt = 0;
+  selectedTrack = null;
+  if(audio) audio.pause();
+  audio = new Audio(currentSong.preview);
+  document.getElementById('guessInput').value = '';
+  const errEl = document.getElementById('errText');
+  errEl.textContent = ''; errEl.style.color = '';
+  document.getElementById('guessHistory').innerHTML = '';
+  document.getElementById('dropdown').classList.add('hidden');
+  ['playBtn','guessInput','guessBtn','skipBtn','giveupBtn'].forEach(id=>document.getElementById(id).disabled = false);
+  buildProgress();
+  updateProgress();
+  document.getElementById('snippetLabel').textContent = (DURATIONS[0]/1000).toFixed(1) + 's';
+  document.getElementById('streakLive').textContent = '🔥 Racha: ' + streakCount;
+}
+
+function closeResultModal(){
+  document.getElementById('resultModal').classList.add('hidden');
+}
+function openResultModal(){
+  document.getElementById('resultModal').classList.remove('hidden');
+}
+
+function playSnippet(){
+  if(playing || !currentSong) return;
+  playing = true;
+  audio.currentTime = 0;
+  audio.play().catch(()=>{});
+  const dur = DURATIONS[attempt];
+  document.getElementById('snippetLabel').textContent = (dur/1000).toFixed(1) + 's';
+  setTimeout(()=>{ audio.pause(); playing = false; }, dur);
+}
+
+function renderDropdown(query){
+  const dd = document.getElementById('dropdown');
+  if(!query){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
+  const q = norm(query);
+  const sourceList = mode === 'libre'
+    ? pool.filter(t => category === 'todos' || t.artistKey === category)
+    : filteredPool();
+  const matches = sourceList.filter(s => norm(s.title).includes(q) || norm(s.artist).includes(q)).slice(0,7);
+  if(!matches.length){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
+  dd.innerHTML = '';
+  matches.forEach(m=>{
+    const item = document.createElement('div');
+    item.className = 'dd-item';
+    item.innerHTML = m.title + '<small>' + m.artist + '</small>';
+    item.addEventListener('click', ()=>{
+      selectedTrack = m;
+      document.getElementById('guessInput').value = m.title + ' — ' + m.artist;
+      dd.classList.add('hidden'); dd.innerHTML = '';
+    });
+    dd.appendChild(item);
+  });
+  dd.classList.remove('hidden');
+}
+
+async function loadStats(){
+  return lsGet('freekdle-stats', {played:0, wins:0, streak:0});
+}
+async function saveStats(stats){
+  lsSet('freekdle-stats', stats);
+}
+
+function addHistoryEntry(track, correct){
+  const li = document.createElement('li');
+  const mark = document.createElement('span');
+  mark.className = correct ? 'gh-right' : 'gh-wrong';
+  mark.textContent = correct ? '✓' : '✗';
+  const label = document.createElement('span');
+  label.textContent = track.title + ' — ' + track.artist;
+  li.appendChild(label); li.appendChild(mark);
+  document.getElementById('guessHistory').prepend(li);
+}
+
+async function showReveal(won, song){
+  ['playBtn','guessInput','guessBtn','skipBtn','giveupBtn'].forEach(id=>document.getElementById(id).disabled = true);
+  document.getElementById('dropdown').classList.add('hidden');
+  if(audio) audio.pause();
+
+  const stats = await loadStats();
+  stats.played += 1;
+  if(won){ stats.wins += 1; stats.streak += 1; } else { stats.streak = 0; }
+  await saveStats(stats);
+
+  document.getElementById('statPlayed').textContent = stats.played;
+  document.getElementById('statWinPct').textContent = stats.played ? Math.round((stats.wins/stats.played)*100) + '%' : '0%';
+  document.getElementById('statStreak').textContent = stats.streak;
+
+  const tag = document.getElementById('resultTag');
+  tag.textContent = won ? '¡Ganaste!' : 'Fallaste';
+  tag.className = 'result-tag ' + (won ? 'tag-win' : 'tag-lose');
+  document.getElementById('revealArt').src = song.artwork;
+  document.getElementById('revealArt').alt = song.title;
+  document.getElementById('revealTitle').textContent = song.title;
+  document.getElementById('revealArtist').textContent = song.artist;
+  document.getElementById('revealLink').href = song.url || '#';
+
+  // Bloquea esta dificultad (reto diario) hasta mañana.
+  saveDailyRecord(category, difficulty, {
+    date: todayStr(), won,
+    song: { id:song.id, title:song.title, artist:song.artist, artwork:song.artwork, url:song.url },
+    category, difficulty
+  });
+  showResultLockNote();
+
+  document.getElementById('roundDone').classList.remove('hidden');
+  openResultModal();
+}
+
+function showResultLockNote(){
+  document.getElementById('resultLockNote').classList.remove('hidden');
+  startLockCountdown('resultLockCountdown');
+}
+function hideResultLockNote(){
+  document.getElementById('resultLockNote').classList.add('hidden');
+  stopLockCountdown();
+}
+
+// Muestra el resultado ya guardado de una dificultad del reto diario,
+// sin permitir jugarla de nuevo hasta mañana.
+async function openDiarioLockedRecap(rec){
+  const stats = await loadStats();
+  document.getElementById('statPlayed').textContent = stats.played;
+  document.getElementById('statWinPct').textContent = stats.played ? Math.round((stats.wins/stats.played)*100) + '%' : '0%';
+  document.getElementById('statStreak').textContent = stats.streak;
+
+  const tag = document.getElementById('resultTag');
+  tag.textContent = rec.won ? '¡Ganaste!' : 'Fallaste';
+  tag.className = 'result-tag ' + (rec.won ? 'tag-win' : 'tag-lose');
+  const song = rec.song || {};
+  document.getElementById('revealArt').src = song.artwork || '';
+  document.getElementById('revealArt').alt = song.title || '';
+  document.getElementById('revealTitle').textContent = song.title || '';
+  document.getElementById('revealArtist').textContent = song.artist || '';
+  document.getElementById('revealLink').href = song.url || '#';
+  showResultLockNote();
+  openResultModal();
+}
+
+function handleStreakCorrect(){
+  streakSongs.push({ id:currentSong.id, title:currentSong.title, artist:currentSong.artist, artwork:currentSong.artwork, url:currentSong.url, duration:DURATIONS[attempt] });
+  streakCount = streakSongs.length;
+  const errEl = document.getElementById('errText');
+  errEl.style.color = 'var(--facil)';
+  errEl.textContent = '¡Correcto! Va la próxima…';
+  document.getElementById('streakLive').textContent = '🔥 Racha: ' + streakCount;
+  ['playBtn','guessInput','guessBtn','skipBtn','giveupBtn'].forEach(id=>document.getElementById(id).disabled = true);
+  setTimeout(startStreakRound, 700);
+}
+
+async function endStreakRun(){
+  ['playBtn','guessInput','guessBtn','skipBtn','giveupBtn'].forEach(id=>document.getElementById(id).disabled = true);
+  document.getElementById('dropdown').classList.add('hidden');
+  if(audio) audio.pause();
+
+  const finalStreak = streakSongs.length;
+  const lostSong = currentSong ? {
+    id: currentSong.id, title: currentSong.title, artist: currentSong.artist,
+    artwork: currentSong.artwork, url: currentSong.url
+  } : null;
+
+  let best = lsGet('freekdle-streak-best', 0);
+  if(finalStreak > best){ best = finalStreak; lsSet('freekdle-streak-best', best); }
+
+  let history = lsGet('freekdle-streak-history', []);
+  history.push({date: todayStr(), streak: finalStreak, category});
+  if(history.length > 200) history = history.slice(-200);
+  lsSet('freekdle-streak-history', history);
+
+  // Alimenta la memoria anti-repetición: estas canciones tardarán en
+  // volver a salir en el modo libre (ninguna categoría).
+  const playedIds = streakSongs.map(s=>s.id);
+  if(lostSong) playedIds.push(lostSong.id);
+  pushDailyRecentIds(playedIds);
+
+  renderStreakRecap(finalStreak, best, history, streakSongs, lostSong);
+  document.getElementById('roundDone').classList.remove('hidden');
+  document.getElementById('streakModal').classList.remove('hidden');
+}
+
+function renderStreakRecap(finalStreak, best, history, songsList, lostSong){
+  songsList = songsList || [];
+  document.getElementById('streakFinal').textContent = finalStreak;
+  document.getElementById('streakBestNum').textContent = best;
+
+  const lostWrap = document.getElementById('streakLostWrap');
+  if(lostSong){
+    lostWrap.classList.remove('hidden');
+    document.getElementById('streakLostArt').src = lostSong.artwork || '';
+    document.getElementById('streakLostArt').alt = lostSong.title || '';
+    document.getElementById('streakLostTitle').textContent = lostSong.title || '';
+    document.getElementById('streakLostArtist').textContent = lostSong.artist || '';
+    document.getElementById('streakLostLink').href = lostSong.url || '#';
+  } else {
+    lostWrap.classList.add('hidden');
+  }
+
+  const listEl = document.getElementById('streakSongList');
+  listEl.innerHTML = '';
+  if(!songsList.length){
+    listEl.innerHTML = '<li><span>Ninguna canción adivinada esta vez.</span></li>';
+  } else {
+    songsList.forEach(s=>{
+      const li = document.createElement('li');
+      const img = document.createElement('img');
+      img.className = 'gh-thumb'; img.alt = ''; img.src = s.artwork || '';
+      const info = document.createElement('span');
+      info.className = 'gh-info';
+      info.innerHTML = '<span class="gh-title">' + s.title + '</span><span class="gh-artist">' + s.artist + '</span>';
+      const time = document.createElement('span');
+      time.className = 'gh-right';
+      time.textContent = (s.duration/1000).toFixed(1) + 's';
+      li.appendChild(img); li.appendChild(info); li.appendChild(time);
+      listEl.appendChild(li);
+    });
+  }
+
+  const relevant = history.filter(h=>h.category===category);
+  const source = relevant.length >= 2 ? relevant : history;
+  const last = source.slice(-10);
+  const bars = document.getElementById('streakBars');
+  bars.innerHTML = '';
+  const max = Math.max(1, ...last.map(h=>h.streak));
+  last.forEach(h=>{
+    const col = document.createElement('div');
+    col.className = 'streak-bar-col';
+    const val = document.createElement('div');
+    val.className = 'streak-bar-val';
+    val.textContent = h.streak;
+    const bar = document.createElement('div');
+    bar.className = 'streak-bar';
+    bar.style.height = Math.max(10, Math.round((h.streak/max)*100)) + 'px';
+    bar.title = h.date + ': ' + h.streak;
+    const lbl = document.createElement('div');
+    lbl.className = 'streak-bar-lbl';
+    lbl.textContent = h.date.slice(5);
+    col.appendChild(val); col.appendChild(bar); col.appendChild(lbl);
+    bars.appendChild(col);
+  });
+}
+
+let lockCountdownInterval = null;
+function msUntilNextLocalMidnight(){
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0,0,0,0);
+  return next - now;
+}
+function formatCountdown(ms){
+  if(ms < 0) ms = 0;
+  const h = Math.floor(ms/3600000);
+  const m = Math.floor((ms%3600000)/60000);
+  const s = Math.floor((ms%60000)/1000);
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+function startLockCountdown(elId){
+  stopLockCountdown();
+  const el = document.getElementById(elId);
+  const tick = ()=>{ if(el) el.textContent = formatCountdown(msUntilNextLocalMidnight()); };
+  tick();
+  lockCountdownInterval = setInterval(tick, 1000);
+}
+function stopLockCountdown(){
+  if(lockCountdownInterval){ clearInterval(lockCountdownInterval); lockCountdownInterval = null; }
+}
+
+function refreshDiarioCard(){
+  const sub = document.getElementById('diarioSub');
+  const card = document.getElementById('pickDiario');
+  if(!sub || !card) return;
+  const playedCount = DIFFS.filter(d => getDailyRecord(category, d.key)).length;
+  if(playedCount >= DIFFS.length){
+    sub.textContent = '✅ Completaste las ' + DIFFS.length + ' dificultades hoy · vuelve mañana';
+    card.classList.add('locked');
+  } else if(playedCount > 0){
+    sub.textContent = playedCount + '/' + DIFFS.length + ' dificultades jugadas hoy';
+    card.classList.remove('locked');
+  } else {
+    sub.textContent = '1 canción por dificultad, 1 vez al día';
+    card.classList.remove('locked');
+  }
+}
+
+function submitGuess(){
+  const errEl = document.getElementById('errText');
+  if(!selectedTrack){ errEl.style.color=''; errEl.textContent = 'Selecciona una canción de la lista antes de adivinar.'; return; }
+  errEl.style.color = '';
+  errEl.textContent = '';
+  const correct = selectedTrack.id === currentSong.id;
+  addHistoryEntry(selectedTrack, correct);
+  document.getElementById('guessInput').value = '';
+  selectedTrack = null;
+  if(correct){
+    if(mode === 'libre'){ handleStreakCorrect(); } else { showReveal(true, currentSong); }
+    return;
+  }
+  attempt += 1;
+  updateProgress();
+  if(attempt >= DURATIONS.length){
+    if(mode === 'libre'){ endStreakRun(); } else { showReveal(false, currentSong); }
+    return;
+  }
+  document.getElementById('snippetLabel').textContent = (DURATIONS[attempt]/1000).toFixed(1) + 's';
+}
+function skipAttempt(){
+  const errEl = document.getElementById('errText');
+  errEl.style.color = '';
+  errEl.textContent = '';
+  attempt += 1;
+  selectedTrack = null;
+  document.getElementById('guessInput').value = '';
+  document.getElementById('dropdown').classList.add('hidden');
+  updateProgress();
+  if(attempt >= DURATIONS.length){
+    if(mode === 'libre'){ endStreakRun(); } else { showReveal(false, currentSong); }
+    return;
+  }
+  document.getElementById('snippetLabel').textContent = (DURATIONS[attempt]/1000).toFixed(1) + 's';
+}
+function giveUp(){
+  if(mode === 'libre'){ endStreakRun(); } else { showReveal(false, currentSong); }
+}
+
+function setFooter(){
+  const f = document.getElementById('footerNote');
+  f.textContent = 'Fragmentos de 30s vía Apple Music.';
+  if(artistsMissing.length) log('Sin catálogo disponible: ' + artistsMissing.join(', '));
+}
+
+const POOL_CACHE_KEY = 'freekdle-catalog-cache-v5';
+const POOL_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
+
+async function loadCachedPool(){
+  const data = lsGet(POOL_CACHE_KEY, null);
+  if(!data || !Array.isArray(data.pool) || !data.pool.length) return null;
+  if(!data.ts || (Date.now() - data.ts) > POOL_CACHE_TTL) return null;
+  return data;
+}
+async function saveCachedPool(){
+  lsSet(POOL_CACHE_KEY, {pool, artistsMissing, ts:Date.now()});
+}
+async function clearCachedPool(){
+  lsDel(POOL_CACHE_KEY);
+}
+
+async function init(){
+  const cached = await loadCachedPool();
+  if(cached){
+    pool = cached.pool;
+    artistsMissing = cached.artistsMissing || [];
+  } else {
+    await buildPool();
+    if(!pool.length){
+      document.getElementById('debugLog2').innerHTML = document.getElementById('debugLog').innerHTML;
+      showScreen('error');
+      return;
+    }
+    await saveCachedPool();
+  }
+  setFooter();
+  buildDiffScreen();
+  buildCategoryScreen();
+  showScreen('category');
+}
+
+document.getElementById('playBtn').addEventListener('click', playSnippet);
+document.getElementById('guessBtn').addEventListener('click', submitGuess);
+document.getElementById('skipBtn').addEventListener('click', skipAttempt);
+document.getElementById('giveupBtn').addEventListener('click', giveUp);
+
+document.getElementById('modalNextDiffBtn').addEventListener('click', ()=>{
+  closeResultModal();
+  hideResultLockNote();
+  const next = nextUnplayedDifficulty(difficulty);
+  if(next){
+    difficulty = next.key;
+    document.body.style.setProperty('--accent', next.color);
+    document.getElementById('diffTag').textContent = next.name;
+    startRound();
+  } else {
+    showScreen('diff');
+  }
+});
+document.getElementById('modalDiffBtn').addEventListener('click', ()=>{
+  closeResultModal();
+  hideResultLockNote();
+  showScreen('diff');
+});
+document.getElementById('modalMenuBtn').addEventListener('click', ()=>{
+  closeResultModal();
+  hideResultLockNote();
+  resetAccent();
+  showScreen('category');
+});
+document.getElementById('modalCloseBtn').addEventListener('click', ()=>{ closeResultModal(); hideResultLockNote(); });
+document.getElementById('reopenModalBtn').addEventListener('click', openResultModal);
+document.getElementById('resultModal').addEventListener('click', (e)=>{
+  if(e.target.id === 'resultModal'){ closeResultModal(); hideResultLockNote(); }
+});
+
+document.getElementById('streakCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('streakModal').classList.add('hidden');
+});
+document.getElementById('streakRetryBtn').addEventListener('click', ()=>{
+  document.getElementById('streakModal').classList.add('hidden');
+  enterStreakMode();
+});
+document.getElementById('streakMenuBtn').addEventListener('click', ()=>{
+  document.getElementById('streakModal').classList.add('hidden');
+  resetAccent();
+  showScreen('category');
+});
+document.getElementById('streakModal').addEventListener('click', (e)=>{
+  if(e.target.id === 'streakModal'){ document.getElementById('streakModal').classList.add('hidden'); }
+});
+
+document.getElementById('menuBtn').addEventListener('click', ()=>{
+  if(audio) audio.pause();
+  resetAccent();
+  showScreen('category');
+});
+document.getElementById('nextDiffBtn').addEventListener('click', ()=>{
+  const next = nextUnplayedDifficulty(difficulty);
+  if(next){
+    difficulty = next.key;
+    document.body.style.setProperty('--accent', next.color);
+    document.getElementById('diffTag').textContent = next.name;
+    startRound();
+  } else {
+    showScreen('diff');
+  }
+});
+
+document.getElementById('pickDiario').addEventListener('click', ()=>{
+  mode = 'diario';
+  showScreen('diff');
+});
+document.getElementById('pickLibre').addEventListener('click', ()=>{ mode = 'libre'; enterStreakMode(); });
+document.getElementById('backToCategory').addEventListener('click', ()=>{ showScreen('category'); });
+document.getElementById('backToMode').addEventListener('click', ()=>{ showScreen('mode'); });
+
+document.getElementById('guessInput').addEventListener('input', (e)=>{ selectedTrack = null; renderDropdown(e.target.value); });
+document.getElementById('guessInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitGuess(); });
+document.addEventListener('click', (e)=>{ if(!e.target.closest('.guess-box')) document.getElementById('dropdown').classList.add('hidden'); });
+
+document.getElementById('refreshCatalogBtn').addEventListener('click', async ()=>{
+  await clearCachedPool();
+  location.reload();
+});
+document.getElementById('retryBtn').addEventListener('click', async ()=>{
+  document.getElementById('debugLog').innerHTML = '';
+  await clearCachedPool();
+  showScreen('loading');
+  init();
+});
+
+init();
+</script>
+</body>
+</html>
