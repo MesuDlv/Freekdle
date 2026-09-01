@@ -461,13 +461,32 @@ function artistTokensMatch(artistName, matchKeys){
   return raw.some(tok => matchKeys.includes(norm(tok)));
 }
 
+// --- JSONP: el endpoint de iTunes NO permite CORS desde dominios en
+// producción (solo desde localhost), así que en vez de fetch() usamos una
+// petición JSONP clásica vía <script>, que no está sujeta a la política
+// CORS del navegador.
+function jsonp(url){
+  return new Promise((resolve, reject) => {
+    const cbName = 'freekdle_jsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 9000);
+    function cleanup(){
+      delete window[cbName];
+      script.remove();
+      clearTimeout(timeout);
+    }
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+    script.onerror = () => { cleanup(); reject(new Error('script error')); };
+    document.body.appendChild(script);
+  });
+}
+
 async function lookupArtist(id, country){
   const cc = country ? ('&country=' + country) : '';
   const url = 'https://itunes.apple.com/lookup?id=' + id + '&entity=song&limit=200' + cc;
   try{
-    const res = await fetch(url);
-    if(!res.ok){ log('id ' + id + (country ? ' ['+country+']' : '') + ' HTTP ' + res.status); return []; }
-    const data = await res.json();
+    const data = await jsonp(url);
     const tracks = (data.results || []).filter(r => r.wrapperType === 'track');
     log('id ' + id + (country ? ' ['+country+']' : '') + ': ' + tracks.length + ' tracks crudos');
     return tracks;
@@ -632,14 +651,17 @@ function updateProgress(){
 
 // Memoria anti-repetición: recuerda las últimas canciones mostradas por
 // cada combinación de categoría+dificultad para no repetir la misma
-// canción dos veces seguidas (ni casi seguidas) en modo libre.
+// canción dos veces seguidas (ni casi seguidas) en el reto diario.
 function recentKey(){ return category + '|' + difficulty; }
 function recordRecentSong(id){
   const k = recentKey();
   if(!recentMap[k]) recentMap[k] = [];
   recentMap[k].push(id);
   const list = filteredPool();
-  const maxMemory = Math.max(1, Math.min(6, list.length - 1));
+  // Recordamos hasta el 80% del catálogo filtrado (antes solo se recordaban
+  // 6 canciones, lo que permitía repeticiones tempranas si el catálogo
+  // filtrado era chico).
+  const maxMemory = Math.max(1, Math.min(list.length - 1, Math.ceil(list.length * 0.8)));
   recentMap[k] = recentMap[k].slice(-maxMemory);
 }
 function pickSong(){
@@ -688,6 +710,27 @@ function enterStreakMode(){
   startStreakRound();
 }
 
+// --- Media Session: evitamos que el sistema operativo (notificación de
+// reproducción en Android/iOS) muestre el título/artista real (¡eso sería
+// un spoiler de la respuesta!) y evitamos que el usuario pueda usar los
+// controles de la notificación para escuchar el fragmento completo
+// saltándose el límite de tiempo del juego.
+function setupMediaSession(){
+  if(!('mediaSession' in navigator)) return;
+  try{
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: '???',
+      artist: 'FREEKDLE',
+      album: '',
+      artwork: []
+    });
+    const block = () => { if(audio) audio.pause(); };
+    ['play','pause','stop','seekbackward','seekforward','seekto','previoustrack','nexttrack'].forEach(action=>{
+      try{ navigator.mediaSession.setActionHandler(action, block); }catch(e){}
+    });
+  }catch(e){}
+}
+
 async function startRound(){
   document.getElementById('emptyMsg').classList.add('hidden');
   document.getElementById('roundDone').classList.add('hidden');
@@ -704,6 +747,8 @@ async function startRound(){
   selectedTrack = null;
   if(audio) audio.pause();
   audio = new Audio(currentSong.preview);
+  audio.preload = 'auto';
+  setupMediaSession();
   document.getElementById('guessInput').value = '';
   const errEl = document.getElementById('errText');
   errEl.textContent = ''; errEl.style.color = '';
@@ -715,27 +760,47 @@ async function startRound(){
   document.getElementById('snippetLabel').textContent = (DURATIONS[0]/1000).toFixed(1) + 's';
 }
 
+// Elige la siguiente canción de racha evitando repeticiones tanto como sea
+// posible: primero intenta la dificultad "ideal" sin repetir nada reciente,
+// luego va ampliando la búsqueda (misma dificultad permitiendo recientes,
+// después cualquier dificultad de la categoría) ANTES de aceptar una
+// canción ya usada en esta misma racha.
+function pickStreakSong(tier){
+  const usedIds = new Set(streakSongs.map(s=>s.id));
+  const recentIds = new Set(getDailyRecentIds());
+  const byCategory = pool.filter(t => category === 'todos' || t.artistKey === category);
+  const byTier = byCategory.filter(t => t.difficulty === tier);
+
+  const attempts = [
+    byTier.filter(s => !usedIds.has(s.id) && !recentIds.has(s.id)),
+    byTier.filter(s => !usedIds.has(s.id)),
+    byCategory.filter(s => !usedIds.has(s.id) && !recentIds.has(s.id)),
+    byCategory.filter(s => !usedIds.has(s.id)),
+    byTier.length ? byTier : byCategory
+  ];
+  for(const list of attempts){
+    if(list.length) return list[Math.floor(Math.random()*list.length)];
+  }
+  return null;
+}
+
 async function startStreakRound(){
   document.getElementById('emptyMsg').classList.add('hidden');
   document.getElementById('roundDone').classList.add('hidden');
   const tier = streakTierForCount(streakSongs.length);
-  let list = pool.filter(t => (category === 'todos' || t.artistKey === category) && t.difficulty === tier);
-  if(!list.length) list = pool.filter(t => (category === 'todos' || t.artistKey === category));
-  if(!list.length){
+  const hasAny = pool.some(t => category === 'todos' || t.artistKey === category);
+  if(!hasAny){
     document.getElementById('emptyMsg').classList.remove('hidden');
     ['playBtn','guessInput','guessBtn','skipBtn','giveupBtn'].forEach(id=>document.getElementById(id).disabled = true);
     return;
   }
-  const usedIds = new Set(streakSongs.map(s=>s.id));
-  const recentIds = new Set(getDailyRecentIds());
-  let candidates = list.filter(s => !usedIds.has(s.id) && !recentIds.has(s.id));
-  if(!candidates.length) candidates = list.filter(s => !usedIds.has(s.id));
-  if(!candidates.length) candidates = list;
-  currentSong = candidates[Math.floor(Math.random()*candidates.length)];
+  currentSong = pickStreakSong(tier);
   attempt = 0;
   selectedTrack = null;
   if(audio) audio.pause();
   audio = new Audio(currentSong.preview);
+  audio.preload = 'auto';
+  setupMediaSession();
   document.getElementById('guessInput').value = '';
   const errEl = document.getElementById('errText');
   errEl.textContent = ''; errEl.style.color = '';
@@ -1061,7 +1126,7 @@ function setFooter(){
   if(artistsMissing.length) log('Sin catálogo disponible: ' + artistsMissing.join(', '));
 }
 
-const POOL_CACHE_KEY = 'freekdle-catalog-cache-v5';
+const POOL_CACHE_KEY = 'freekdle-catalog-cache-v6';
 const POOL_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
 
 async function loadCachedPool(){
