@@ -332,13 +332,35 @@ const ARTISTS = [
   { key:'zeroraps', name:'ZerØ', ids:[1530234574], matchKeys:['zer0'] },
   { key:'bynmc', name:'BynMc', ids:[1516523295], matchKeys:['bynmc'] },
   { key:'keyto', name:'KeyTo', ids:[1434742318], matchKeys:['keyto'] },
-  { key:'nyako', name:'Nyako', ids:[1490055376], matchKeys:['nyako'] }
+  { key:'nyako', name:'Nyako', ids:[1490055376], matchKeys:['nyako'] },
+  { key:'soulrap', name:'ImSoul', ids:[1596686240], matchKeys:['imsoul'] },
+  { key:'bendercat', name:'BenderCat', ids:[1422533650], matchKeys:['bendercat'] },
+  // Lucksterr = fusión de dos IDs de artista de iTunes (Lucksterr Rap y
+  // Luckster), que en la práctica son el mismo freekraper con dos perfiles.
+  { key:'lucksterr', name:'Lucksterr', ids:[1754418177,1656321593], matchKeys:['lucksterrrap','lucksterr','luckster'] }
 ];
 const CAT_COLORS = {
   todos:'linear-gradient(135deg,#FF7A45,#FF2E63)',
   megar:'#34D399', kballero:'#FFD23F', darckstar:'#38BDF8', doblecero:'#FB923C',
-  zeroraps:'#B084F5', bynmc:'#F472B6', keyto:'#A3E635', nyako:'#22D3EE'
+  zeroraps:'#B084F5', bynmc:'#F472B6', keyto:'#A3E635', nyako:'#22D3EE',
+  soulrap:'#F97316', bendercat:'#60A5FA', lucksterr:'#FBBF24',
+  bds:'linear-gradient(135deg,#34D399,#F472B6)',
+  rapperland:'linear-gradient(135deg,#A3E635,#22D3EE)'
 };
+
+// Categorías "mix" que solo incluyen un subconjunto de artistas (no todos).
+const MIX_GROUPS = {
+  bds: { name:'BDS', keys:['megar','bynmc','soulrap','bendercat','kballero'] },
+  rapperland: { name:'Rapperland', keys:['keyto','nyako','zeroraps'] }
+};
+// Determina si una canción pertenece a la categoría seleccionada, ya sea
+// 'todos', un artista individual, o un grupo mix (BDS, Rapperland, etc).
+function songBelongsToCategory(t, cat){
+  if(cat === 'todos') return true;
+  const group = MIX_GROUPS[cat];
+  if(group) return group.keys.includes(t.artistKey);
+  return t.artistKey === cat;
+}
 const STOREFRONTS = ['us','co','mx','es','ar'];
 const STOREFRONTS_FALLBACK = ['cl','pe','ec','ve','uy','py','bo','gt','hn','sv','ni','cr','pa','do'];
 
@@ -348,7 +370,11 @@ const STOREFRONTS_FALLBACK = ['cl','pe','ec','ve','uy','py','bo','gt','hn','sv',
 // Si detectas otra canción que no es de quien dice ser, agrégala aquí
 // con norm('Título exacto de la canción').
 const MANUAL_EXCLUDES = {
-  zeroraps: [norm('Wandering Banshees'), norm('Sale temps pour être pauvre')]
+  zeroraps: [norm('Wandering Banshees'), norm('Sale temps pour être pauvre')],
+  // "Tick Tack - Sae Itoshi" aparece en el perfil de Lucksterr Rap (es un
+  // collab de Doblecero, Megar, DarckStar & Lucksterr Rap) pero en realidad
+  // no es una canción suya — se excluye para que no salga en su categoría.
+  lucksterr: [norm('Tick Tack - Sae Itoshi')]
 };
 
 // Para las canciones encontradas en los storefronts "de confianza"
@@ -446,6 +472,7 @@ function log(msg){
 }
 function categoryLabel(key){
   if(key === 'todos') return 'Mix (todos)';
+  if(MIX_GROUPS[key]) return MIX_GROUPS[key].name;
   const a = ARTISTS.find(x=>x.key===key);
   return a ? a.name : key;
 }
@@ -590,6 +617,21 @@ function buildCategoryScreen(){
   });
   grid.appendChild(mixTile);
 
+  Object.keys(MIX_GROUPS).forEach(groupKey=>{
+    const group = MIX_GROUPS[groupKey];
+    if(!pool.some(t=>group.keys.includes(t.artistKey))) return;
+    const tile = document.createElement('button');
+    tile.className = 'cat-tile';
+    tile.style.background = CAT_COLORS[groupKey] || '#8E8AB5';
+    tile.innerHTML = '<span class="cat-emoji">🔀</span>' + group.name;
+    tile.addEventListener('click', ()=>{
+      category = groupKey;
+      document.getElementById('modeCatLabel').textContent = 'Categoría: ' + categoryLabel(category);
+      showScreen('mode');
+    });
+    grid.appendChild(tile);
+  });
+
   ARTISTS.forEach(a=>{
     if(!pool.some(t=>t.artistKey===a.key)) return;
     const tile = document.createElement('button');
@@ -630,7 +672,7 @@ function buildDiffScreen(){
 }
 
 function filteredPool(){
-  return pool.filter(t => t.difficulty === difficulty && (category === 'todos' || t.artistKey === category));
+  return pool.filter(t => t.difficulty === difficulty && songBelongsToCategory(t, category));
 }
 
 function buildProgress(){
@@ -768,7 +810,7 @@ async function startRound(){
 function pickStreakSong(tier){
   const usedIds = new Set(streakSongs.map(s=>s.id));
   const recentIds = new Set(getDailyRecentIds());
-  const byCategory = pool.filter(t => category === 'todos' || t.artistKey === category);
+  const byCategory = pool.filter(t => songBelongsToCategory(t, category));
   const byTier = byCategory.filter(t => t.difficulty === tier);
 
   const attempts = [
@@ -788,7 +830,7 @@ async function startStreakRound(){
   document.getElementById('emptyMsg').classList.add('hidden');
   document.getElementById('roundDone').classList.add('hidden');
   const tier = streakTierForCount(streakSongs.length);
-  const hasAny = pool.some(t => category === 'todos' || t.artistKey === category);
+  const hasAny = pool.some(t => songBelongsToCategory(t, category));
   if(!hasAny){
     document.getElementById('emptyMsg').classList.remove('hidden');
     ['playBtn','guessInput','guessBtn','skipBtn','giveupBtn'].forEach(id=>document.getElementById(id).disabled = true);
@@ -835,7 +877,7 @@ function renderDropdown(query){
   if(!query){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
   const q = norm(query);
   const sourceList = mode === 'libre'
-    ? pool.filter(t => category === 'todos' || t.artistKey === category)
+    ? pool.filter(t => songBelongsToCategory(t, category))
     : filteredPool();
   const matches = sourceList.filter(s => norm(s.title).includes(q) || norm(s.artist).includes(q)).slice(0,7);
   if(!matches.length){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
@@ -1126,7 +1168,7 @@ function setFooter(){
   if(artistsMissing.length) log('Sin catálogo disponible: ' + artistsMissing.join(', '));
 }
 
-const POOL_CACHE_KEY = 'freekdle-catalog-cache-v6';
+const POOL_CACHE_KEY = 'freekdle-catalog-cache-v7';
 const POOL_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
 
 async function loadCachedPool(){
