@@ -334,7 +334,6 @@ const ARTISTS = [
   { key:'keyto', name:'KeyTo', ids:[1434742318], matchKeys:['keyto'] },
   { key:'nyako', name:'Nyako', ids:[1490055376], matchKeys:['nyako'] },
   { key:'soulrap', name:'ImSoul', ids:[1596686240], matchKeys:['imsoul'] },
-  { key:'bendercat', name:'BenderCat', ids:[1422533650], matchKeys:['bendercat'] },
   // Lucksterr = fusión de dos IDs de artista de iTunes (Lucksterr Rap y
   // Luckster), que en la práctica son el mismo freekraper con dos perfiles.
   { key:'lucksterr', name:'Lucksterr', ids:[1754418177,1656321593], matchKeys:['lucksterrrap','lucksterr','luckster'] }
@@ -343,14 +342,14 @@ const CAT_COLORS = {
   todos:'linear-gradient(135deg,#FF7A45,#FF2E63)',
   megar:'#34D399', kballero:'#FFD23F', darckstar:'#38BDF8', doblecero:'#FB923C',
   zeroraps:'#B084F5', bynmc:'#F472B6', keyto:'#A3E635', nyako:'#22D3EE',
-  soulrap:'#F97316', bendercat:'#60A5FA', lucksterr:'#FBBF24',
+  soulrap:'#F97316', lucksterr:'#FBBF24',
   bds:'linear-gradient(135deg,#34D399,#F472B6)',
   rapperland:'linear-gradient(135deg,#A3E635,#22D3EE)'
 };
 
 // Categorías "mix" que solo incluyen un subconjunto de artistas (no todos).
 const MIX_GROUPS = {
-  bds: { name:'BDS', keys:['megar','bynmc','soulrap','bendercat','kballero'] },
+  bds: { name:'BDS', keys:['megar','bynmc','soulrap','kballero'] },
   rapperland: { name:'Rapperland', keys:['keyto','nyako','zeroraps'] }
 };
 // Determina si una canción pertenece a la categoría seleccionada, ya sea
@@ -1168,7 +1167,7 @@ function setFooter(){
   if(artistsMissing.length) log('Sin catálogo disponible: ' + artistsMissing.join(', '));
 }
 
-const POOL_CACHE_KEY = 'freekdle-catalog-cache-v7';
+const POOL_CACHE_KEY = 'freekdle-catalog-cache-v8';
 const POOL_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
 
 async function loadCachedPool(){
