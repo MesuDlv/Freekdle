@@ -64,8 +64,8 @@ const MANUAL_EXCLUDE_IDS = [
 ].map(x => x.id);
 
 // Patrones de título que casi nunca son canciones (vlogs, anuncios, en vivo,
-// resúmenes, covers de openings ajenos, etc.) — filtro de respaldo además del
-// filtro principal por categoryId de YouTube (10 = Música).
+// resúmenes, covers de openings ajenos, etc.) — filtro de respaldo además de
+// la duración mínima y la detección de directos/#shorts.
 const EXCLUDE_TITLE_PATTERNS = [
   /gracias a todos/i, /muchas gracias/i, /\ben vivo\b/i, /\blive\b/i, /q *& *a/i,
   /reacciona(ndo)?\b/i, /vlog/i, /an[uú]ncio/i, /bot[oó]n de oro/i,
@@ -158,7 +158,7 @@ async function getVideosDetails(ids) {
   const out = [];
   for (let i = 0; i < ids.length; i += 50) {
     const chunk = ids.slice(i, i + 50);
-    const data = await apiGet('videos', { part: 'snippet,statistics,contentDetails', id: chunk.join(',') });
+    const data = await apiGet('videos', { part: 'snippet,statistics,contentDetails,liveStreamingDetails', id: chunk.join(',') });
     out.push(...(data.items || []));
     await sleep(60);
   }
@@ -175,16 +175,23 @@ function parseDurationSeconds(iso) {
   return h * 3600 + min * 60 + s;
 }
 
-const MIN_DURATION_SECONDS = 60; // descarta shorts, teasers, intros, etc.
+const MIN_DURATION_SECONDS = 60; // descarta shorts/teasers/intros muy cortos
 
 function isSong(video) {
   const snip = video.snippet;
+  // Directo en curso o programado
   if (snip.liveBroadcastContent && snip.liveBroadcastContent !== 'none') return false;
-  if (snip.categoryId !== '10') return false; // 10 = Música
+  // Directo ya terminado (su VOD queda con liveStreamingDetails aunque ya no esté "en vivo")
+  if (video.liveStreamingDetails) return false;
   const duration = parseDurationSeconds(video.contentDetails && video.contentDetails.duration);
-  if (duration > 0 && duration < MIN_DURATION_SECONDS) return false; // shorts/teasers/intros
+  if (duration > 0 && duration < MIN_DURATION_SECONDS) return false;
   const title = snip.title || '';
+  const description = snip.description || '';
+  if (/#shorts?\b/i.test(title) || /#shorts?\b/i.test(description)) return false;
   if (EXCLUDE_TITLE_PATTERNS.some(rx => rx.test(title))) return false;
+  // Nota: NO filtramos por categoryId (10 = Música). Muchos raperos no
+  // etiquetan sus subidas recientes con esa categoría y eso hacía que
+  // canciones nuevas de canales como ZerØ no entraran al catálogo.
   return true;
 }
 
