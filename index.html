@@ -168,6 +168,54 @@
   .gh-info{display:flex;flex-direction:column;flex:1;min-width:0;margin-left:2px;}
   .gh-title{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .gh-artist{font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* --- Selección de juego --- */
+  .game-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;max-width:520px;}
+  .game-card{
+    background:var(--bg-panel);border:2px solid var(--line);border-radius:22px;padding:28px 18px;
+    cursor:pointer;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
+    transition:transform .15s, border-color .15s, box-shadow .15s;
+  }
+  .game-card:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 10px 28px rgba(0,0,0,0.35);}
+  .game-card-emoji{font-size:40px;}
+  .game-card-title{font-family:'Bungee',cursive;font-size:17px;}
+  .game-card-sub{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+  @media (max-width:480px){ .game-grid{grid-template-columns:1fr;} }
+
+  /* --- RAPDLE --- */
+  .rf-group-todos{background:linear-gradient(135deg,#FF7A45,#FF2E63);}
+  .rf-group-bds{background:linear-gradient(135deg,#34D399,#F472B6);}
+  .rf-group-lns{background:linear-gradient(135deg,#60A5FA,#B084F5);}
+  .rf-group-rapperland{background:linear-gradient(135deg,#A3E635,#22D3EE);}
+
+  .rf-thumb-wrap{position:relative;width:100%;max-width:400px;aspect-ratio:16/9;border-radius:18px;overflow:hidden;margin:0 auto 18px;background:var(--bg-panel-2);}
+  .rf-thumb-wrap img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .3s;}
+  .rf-thumb-hidden{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;color:var(--muted);font-size:13px;text-align:center;padding:0 20px;}
+
+  .rf-hearts{text-align:center;font-size:26px;letter-spacing:6px;margin-bottom:14px;}
+  .rf-hearts span.lost{opacity:0.25;filter:grayscale(1);}
+
+  .rf-questions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px;}
+  .rf-q-btn{
+    background:var(--bg-panel-2);border:1px solid var(--line);color:var(--ink);border-radius:999px;
+    padding:9px 14px;font-family:'Space Mono',monospace;font-size:11.5px;cursor:pointer;text-align:left;
+  }
+  .rf-q-btn:hover{border-color:var(--accent);}
+  .rf-q-answered{background:none;border:1px dashed var(--line);cursor:default;color:var(--muted);}
+  .rf-q-answered b{color:var(--ink);}
+  .rf-q-yes{color:var(--facil) !important;}
+  .rf-q-no{color:var(--experto) !important;}
+  .rf-hint-note{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-align:center;margin:0 0 4px;}
+
+  .rf-diff-grid{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;}
+  .rf-diff-card{border-radius:16px;padding:18px 20px;border:2px solid var(--line);cursor:pointer;background:var(--bg-panel);text-align:left;}
+  .rf-diff-card:hover{border-color:var(--accent);}
+  .rf-diff-card .dc-name{font-family:'Bungee',cursive;font-size:14px;display:block;margin-bottom:3px;}
+  .rf-diff-card .dc-tag{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+  .rf-diff-card.locked{opacity:0.5;cursor:default;}
+  .rf-diff-card.locked .dc-tag{color:var(--accent);}
+
+  .rf-reveal-meta{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin:6px 0;}
 </style>
 </head>
 <body>
@@ -176,6 +224,25 @@
     <h1 class="logo">FREEK<span>DLE</span></h1>
     <p class="tagline">Adivina el freekrap (Creado por Mesu_Dlv)</p>
   </header>
+
+  <div class="center-screen" id="gameChoiceScreen">
+    <h2 class="choice-title">Elige un juego</h2>
+    <p class="choice-sub">Dos formas de poner a prueba tu freekrap-conocimiento</p>
+    <div class="game-grid">
+      <button class="game-card" id="chooseFreekdle">
+        <span class="game-card-emoji">🎧</span>
+        <span class="game-card-title">FREEKDLE</span>
+        <span class="game-card-sub">Adivina la canción por su fragmento de audio</span>
+      </button>
+      <button class="game-card" id="chooseRefdle">
+        <span class="game-card-emoji">📺</span>
+        <span class="game-card-title">RAPDLE</span>
+        <span class="game-card-sub">Adivina el video por su miniatura y pistas</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="hidden" id="freekdleApp">
 
   <div class="center-screen" id="loadingScreen">
     <div class="spinner"></div>
@@ -192,6 +259,7 @@
     <h2 class="choice-title">Elige una categoría</h2>
     <p class="choice-sub">Un artista o el Mix con todos</p>
     <div class="cat-grid" id="catGrid"></div>
+    <button class="backlink" id="backToGameChoiceFromCat">← Elegir otro juego</button>
   </div>
 
   <div class="center-screen hidden" id="modeScreen">
@@ -265,6 +333,154 @@
 
   <footer id="footerNote"></footer>
   <button class="backlink" id="refreshCatalogBtn" style="display:block;margin:6px auto 0;">↻ Actualizar catálogo</button>
+  </div>
+
+  <div class="hidden" id="refdleApp">
+
+    <div class="center-screen" id="rfLoadingScreen">
+      <div class="spinner"></div>
+      <p class="choice-sub">Cargando catálogo de RAPDLE…</p>
+    </div>
+
+    <div class="center-screen hidden" id="rfErrorScreen">
+      <p style="font-family:'Space Mono',monospace;color:var(--experto);text-align:center;">No pude cargar el catálogo de YouTube.</p>
+      <p class="choice-sub">Verifica que exista <code>data/youtube-catalog.json</code> en el repo.</p>
+      <button class="btn-pill primary" id="rfRetryBtn">Reintentar</button>
+      <button class="backlink" id="rfBackToGameChoiceFromError">← Elegir otro juego</button>
+    </div>
+
+    <div class="center-screen hidden" id="rfCategoryScreen">
+      <h2 class="choice-title">Elige una liga</h2>
+      <p class="choice-sub">BDS, LNS, Rapperland o el Mix con todos</p>
+      <div class="cat-grid" id="rfCatGrid"></div>
+      <button class="backlink" id="rfBackToGameChoiceFromCat">← Elegir otro juego</button>
+    </div>
+
+    <div class="center-screen hidden" id="rfModeScreen">
+      <h2 class="choice-title">¿Cómo quieres jugar?</h2>
+      <p class="choice-sub" id="rfModeCatLabel">Elige un modo para empezar</p>
+      <div class="mode-grid">
+        <div class="mode-card" id="rfPickLibre">
+          <p class="mc-title">🎲 Modo libre</p>
+          <p class="mc-sub">Adivina el máximo de videos, sin límite</p>
+        </div>
+        <div class="mode-card" id="rfPickDiario">
+          <p class="mc-title">🔥 Reto diario</p>
+          <p class="mc-sub" id="rfDiarioSub">1 video por dificultad, 1 vez al día</p>
+        </div>
+      </div>
+      <button class="backlink" id="rfBackToCategory">← Cambiar liga</button>
+    </div>
+
+    <div class="center-screen hidden" id="rfDiffScreen">
+      <h2 class="choice-title">Elige la dificultad</h2>
+      <div class="rf-diff-grid" id="rfDiffGrid"></div>
+      <button class="backlink" id="rfBackToMode">← Cambiar modo</button>
+    </div>
+
+    <div class="hidden" id="rfGameScreen">
+      <div class="main">
+        <div class="game-topbar">
+          <button class="btn-pill ghost small" id="rfMenuBtn">← Menú</button>
+          <div class="top-tags">
+            <span class="tag-pill" id="rfCatTag"></span>
+            <span class="tag-pill" id="rfModeTag"></span>
+            <span class="tag-pill" id="rfDiffTag"></span>
+          </div>
+          <button class="btn-pill ghost small hidden" id="rfNextDiffBtn">Siguiente dificultad →</button>
+        </div>
+
+        <div class="card" id="rfGameCard">
+          <div class="streak-live hidden" id="rfStreakLive" style="text-align:center;margin-bottom:10px;"></div>
+          <div class="rf-hearts" id="rfHearts">❤️❤️❤️</div>
+
+          <div class="rf-thumb-wrap" id="rfThumbWrap">
+            <div class="rf-thumb-hidden" id="rfThumbHidden">Sin portada — usa las pistas de texto 👇</div>
+            <img id="rfThumbImg" src="" alt="" class="hidden">
+          </div>
+
+          <p class="rf-hint-note">Cada fallo revela una pista automática. También puedes tocar una pregunta para desbloquearla.</p>
+          <div class="rf-questions" id="rfQuestions"></div>
+
+          <div class="guess-box" style="margin-top:16px;">
+            <input type="text" id="rfGuessInput" placeholder="Busca un video..." autocomplete="off">
+            <button class="btn-pill primary" id="rfGuessBtn">Adivinar</button>
+            <div class="dropdown hidden" id="rfDropdown"></div>
+          </div>
+          <p class="err-text" id="rfErrText"></p>
+
+          <div class="btn-row">
+            <button class="btn-pill ghost" id="rfGiveupBtn">Rendirse</button>
+          </div>
+
+          <div class="round-done hidden" id="rfRoundDone">
+            <p class="rd-text">Ronda terminada.</p>
+            <button class="btn-pill primary" id="rfReopenModalBtn">Ver resultado</button>
+          </div>
+
+          <div class="empty-msg hidden" id="rfEmptyMsg">No hay videos en esta liga/dificultad todavía. Prueba con otra.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer id="rfFooterNote"></footer>
+    <button class="backlink" id="rfRefreshCatalogBtn" style="display:block;margin:6px auto 0;">↻ Actualizar catálogo</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="rfResultModal">
+  <div class="modal-box">
+    <button class="modal-close" id="rfModalCloseBtn" aria-label="Cerrar">×</button>
+    <div class="reveal">
+      <div class="result-tag" id="rfResultTag"></div>
+      <img id="rfRevealArt" src="" alt="">
+      <h3 id="rfRevealTitle"></h3>
+      <p id="rfRevealArtist"></p>
+      <div class="rf-reveal-meta">
+        <span id="rfRevealGroup"></span>
+        <span id="rfRevealViews"></span>
+        <span id="rfRevealYear"></span>
+      </div>
+      <p><a id="rfRevealLink" href="#" target="_blank" rel="noopener">Ver video completo ↗</a></p>
+      <div class="stats-row">
+        <div><b id="rfStatPlayed">0</b>jugadas</div>
+        <div><b id="rfStatWinPct">0%</b>aciertos</div>
+        <div><b id="rfStatStreak">0</b>racha</div>
+      </div>
+      <p class="lock-note hidden" id="rfResultLockNote">🔒 Ya jugaste esta dificultad hoy. Vuelve en <b id="rfResultLockCountdown">--:--:--</b></p>
+      <div class="modal-actions">
+        <button class="btn-pill ghost" id="rfModalNextDiffBtn">Siguiente dificultad →</button>
+        <button class="btn-pill ghost" id="rfModalDiffBtn">Elegir dificultad</button>
+        <button class="btn-pill ghost" id="rfModalMenuBtn">← Volver al menú</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="rfStreakModal">
+  <div class="modal-box">
+    <button class="modal-close" id="rfStreakCloseBtn" aria-label="Cerrar">×</button>
+    <div class="reveal">
+      <div class="result-tag tag-lose">Racha terminada</div>
+      <div class="stats-row">
+        <div><b id="rfStreakFinal">0</b>racha final</div>
+        <div><b id="rfStreakBestNum">0</b>mejor racha</div>
+      </div>
+      <div class="lost-song hidden" id="rfStreakLostWrap">
+        <p class="section-label">Perdiste con</p>
+        <img id="rfStreakLostArt" src="" alt="" class="lost-art">
+        <p class="lost-title" id="rfStreakLostTitle"></p>
+        <p class="lost-artist" id="rfStreakLostArtist"></p>
+        <p><a id="rfStreakLostLink" href="#" target="_blank" rel="noopener">Ver video completo ↗</a></p>
+      </div>
+      <p class="section-label">Videos adivinados</p>
+      <ul class="guess-history gh-songs" id="rfStreakSongList"></ul>
+      <div class="modal-actions">
+        <button class="btn-pill primary" id="rfStreakRetryBtn">🔁 Intentar de nuevo</button>
+        <button class="btn-pill ghost" id="rfStreakMenuBtn">← Volver al menú</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay hidden" id="resultModal">
@@ -322,6 +538,7 @@
     </div>
   </div>
 </div>
+
 
 <script>
 const ARTISTS = [
@@ -1294,7 +1511,536 @@ document.getElementById('retryBtn').addEventListener('click', async ()=>{
   init();
 });
 
-init();
+// --- Selección de juego (FREEKDLE vs RAPDLE) ---
+function backToGameChoice(){
+  if(audio) audio.pause();
+  if(typeof rfPauseVideo === 'function') rfPauseVideo();
+  document.getElementById('freekdleApp').classList.add('hidden');
+  document.getElementById('refdleApp').classList.add('hidden');
+  document.getElementById('gameChoiceScreen').classList.remove('hidden');
+}
+function enterFreekdle(){
+  document.getElementById('gameChoiceScreen').classList.add('hidden');
+  document.getElementById('freekdleApp').classList.remove('hidden');
+  if(pool.length){ showScreen('category'); }
+  else { init(); }
+}
+document.getElementById('chooseFreekdle').addEventListener('click', enterFreekdle);
+document.getElementById('backToGameChoiceFromCat').addEventListener('click', backToGameChoice);
+document.getElementById('chooseRefdle').addEventListener('click', ()=>{
+  document.getElementById('gameChoiceScreen').classList.add('hidden');
+  document.getElementById('refdleApp').classList.remove('hidden');
+  rfEnter();
+});
 </script>
+
+<script>
+// ==========================================================================
+// RAPDLE — segundo juego, basado en catálogo estático de YouTube Data API v3
+// generado por scripts/fetch-youtube-catalog.js (ver GitHub Action asociada).
+// Reutiliza helpers ya definidos arriba: norm, lsGet, lsSet, lsDel, sleep,
+// todayStr, startLockCountdown, stopLockCountdown.
+// ==========================================================================
+
+const RF_CATALOG_URL = 'data/youtube-catalog.json';
+const RF_CACHE_KEY = 'refdle-catalog-cache-v1';
+const RF_CACHE_TTL = 24 * 60 * 60 * 1000; // 24h — igual a la frecuencia del GitHub Action
+const RF_MAX_HEARTS = 3;
+const RF_GROUPS = { bds:{name:'BDS'}, lns:{name:'LNS'}, rapperland:{name:'Rapperland'} };
+const RF_DIFFS = [
+  { key:'sin_portada', name:'Sin portada', tag:'Solo pistas de texto' },
+  { key:'blur', name:'Con portada difuminada', tag:'Miniatura con blur fuerte' }
+];
+const RF_BLUR_LEVELS = [30, 18, 8]; // según corazones perdidos (0,1,2)
+
+let rfPool = [];
+let rfMissing = [];
+let rfCategory = 'todos';
+let rfDifficulty = 'blur';
+let rfMode = 'libre';
+let rfCurrent = null;
+let rfHearts = RF_MAX_HEARTS;
+let rfQuestionQueue = [];
+let rfRevealed = [];
+let rfSelected = null;
+let rfRecentMap = {};
+let rfStreakVideos = [];
+let rfStreakCount = 0;
+
+function rfSongBelongs(v, cat){ return cat === 'todos' ? true : v.group === cat; }
+function rfCategoryLabel(cat){ if(cat==='todos') return 'Mix (todos)'; return RF_GROUPS[cat] ? RF_GROUPS[cat].name : cat; }
+function rfFilteredPool(){ return rfPool.filter(v=>rfSongBelongs(v, rfCategory)); }
+function rfFormatViews(n){
+  if(n >= 1000000){ const m = n/1000000; return (Math.round(m*10)/10) + ' millones'; }
+  if(n >= 1000) return Math.round(n/1000) + ' mil';
+  return String(n);
+}
+
+async function rfLoadCachedCatalog(){
+  const data = lsGet(RF_CACHE_KEY, null);
+  if(!data || !Array.isArray(data.videos) || !data.videos.length) return null;
+  if(!data.ts || (Date.now() - data.ts) > RF_CACHE_TTL) return null;
+  return data;
+}
+async function rfSaveCachedCatalog(raw){
+  lsSet(RF_CACHE_KEY, {videos: raw.videos, missing: raw.missing||[], generatedAt: raw.generatedAt, ts: Date.now()});
+}
+async function rfClearCachedCatalog(){ lsDel(RF_CACHE_KEY); }
+async function rfFetchCatalog(){
+  const res = await fetch(RF_CATALOG_URL + '?t=' + Date.now());
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return await res.json();
+}
+
+async function rfEnter(){
+  rfShowScreen('loading');
+  const cached = await rfLoadCachedCatalog();
+  if(cached){ rfPool = cached.videos; rfMissing = cached.missing || []; rfAfterLoad(); return; }
+  try{
+    const raw = await rfFetchCatalog();
+    rfPool = raw.videos || [];
+    rfMissing = raw.missing || [];
+    if(!rfPool.length){ rfShowScreen('error'); return; }
+    await rfSaveCachedCatalog(raw);
+    rfAfterLoad();
+  }catch(e){
+    rfShowScreen('error');
+  }
+}
+function rfAfterLoad(){
+  document.getElementById('rfFooterNote').textContent = 'Datos vía YouTube Data API v3 · catálogo actualizado automáticamente.';
+  rfBuildCategoryScreen();
+  rfShowScreen('category');
+}
+
+function rfShowScreen(name){
+  ['rfLoadingScreen','rfErrorScreen','rfCategoryScreen','rfModeScreen','rfDiffScreen','rfGameScreen'].forEach(id=>{
+    document.getElementById(id).classList.add('hidden');
+  });
+  const map = {loading:'rfLoadingScreen', error:'rfErrorScreen', category:'rfCategoryScreen', mode:'rfModeScreen', diff:'rfDiffScreen', game:'rfGameScreen'};
+  document.getElementById(map[name]).classList.remove('hidden');
+  if(name === 'mode') rfRefreshDiarioCard();
+  if(name === 'diff') rfBuildDiffScreen();
+}
+
+function rfBuildCategoryScreen(){
+  const grid = document.getElementById('rfCatGrid');
+  grid.innerHTML = '';
+  const mixTile = document.createElement('button');
+  mixTile.className = 'cat-tile rf-group-todos';
+  mixTile.innerHTML = '<span class="cat-emoji">🎲</span>Mix (todos)';
+  mixTile.addEventListener('click', ()=>{ rfCategory='todos'; document.getElementById('rfModeCatLabel').textContent='Liga: '+rfCategoryLabel(rfCategory); rfShowScreen('mode'); });
+  grid.appendChild(mixTile);
+  ['bds','lns','rapperland'].forEach(g=>{
+    if(!rfPool.some(v=>v.group===g)) return;
+    const tile = document.createElement('button');
+    tile.className = 'cat-tile rf-group-' + g;
+    tile.innerHTML = '<span class="cat-emoji">🔀</span>' + RF_GROUPS[g].name;
+    tile.addEventListener('click', ()=>{ rfCategory=g; document.getElementById('rfModeCatLabel').textContent='Liga: '+rfCategoryLabel(rfCategory); rfShowScreen('mode'); });
+    grid.appendChild(tile);
+  });
+}
+
+function rfDailyKey(cat, diff){ return 'refdle-daily-lock-v1-' + cat + '-' + diff; }
+function rfGetDailyRecord(cat, diff){
+  const rec = lsGet(rfDailyKey(cat, diff), null);
+  if(!rec || rec.date !== todayStr()) return null;
+  return rec;
+}
+function rfSaveDailyRecord(cat, diff, rec){ lsSet(rfDailyKey(cat, diff), rec); }
+function rfNextUnplayedDifficulty(fromKey){
+  const idx = RF_DIFFS.findIndex(d=>d.key===fromKey);
+  for(let i=1;i<=RF_DIFFS.length;i++){
+    const cand = RF_DIFFS[(idx+i)%RF_DIFFS.length];
+    if(!rfGetDailyRecord(rfCategory, cand.key)) return cand;
+  }
+  return null;
+}
+function rfRefreshDiarioCard(){
+  const sub = document.getElementById('rfDiarioSub');
+  const card = document.getElementById('rfPickDiario');
+  const playedCount = RF_DIFFS.filter(d=>rfGetDailyRecord(rfCategory, d.key)).length;
+  if(playedCount >= RF_DIFFS.length){ sub.textContent='✅ Completaste ambas dificultades hoy · vuelve mañana'; card.classList.add('locked'); }
+  else if(playedCount > 0){ sub.textContent = playedCount + '/' + RF_DIFFS.length + ' dificultades jugadas hoy'; card.classList.remove('locked'); }
+  else { sub.textContent = '1 video por dificultad, 1 vez al día'; card.classList.remove('locked'); }
+}
+
+function rfBuildDiffScreen(){
+  const grid = document.getElementById('rfDiffGrid');
+  grid.innerHTML = '';
+  RF_DIFFS.forEach(d=>{
+    const card = document.createElement('div');
+    card.className = 'rf-diff-card';
+    if(rfMode === 'diario'){
+      const rec = rfGetDailyRecord(rfCategory, d.key);
+      if(rec){
+        card.classList.add('locked');
+        card.innerHTML = '<span class="dc-name">'+d.name+'</span><span class="dc-tag">'+(rec.won?'✅ Jugada':'❌ Fallada')+' · ver</span>';
+        card.addEventListener('click', ()=>rfOpenDiarioLockedRecap(rec));
+        grid.appendChild(card);
+        return;
+      }
+    }
+    card.innerHTML = '<span class="dc-name">'+d.name+'</span><span class="dc-tag">'+d.tag+'</span>';
+    card.addEventListener('click', ()=>{
+      rfDifficulty = d.key;
+      if(rfMode === 'libre'){ rfEnterStreakMode(); } else { rfEnterGame(); }
+    });
+    grid.appendChild(card);
+  });
+}
+
+function rfRecentKey(){ return rfCategory; }
+function rfRecordRecent(id){
+  const k = rfRecentKey();
+  if(!rfRecentMap[k]) rfRecentMap[k] = [];
+  rfRecentMap[k].push(id);
+  const list = rfFilteredPool();
+  const maxMemory = Math.max(1, Math.min(list.length-1, Math.ceil(list.length*0.8)));
+  rfRecentMap[k] = rfRecentMap[k].slice(-maxMemory);
+}
+function rfPickVideo(){
+  const list = rfFilteredPool();
+  if(!list.length) return null;
+  const recent = rfRecentMap[rfRecentKey()] || [];
+  let candidates = list.filter(v=>!recent.includes(v.id));
+  if(!candidates.length) candidates = list;
+  return candidates[Math.floor(Math.random()*candidates.length)];
+}
+
+// --- Banco dinámico de preguntas sí/no, comparando el video misterio contra
+// sus propios metadatos (grupo, vistas, referencia, año, autor, país). ---
+function rfBuildQuestionBank(video, pool){
+  const qs = [];
+  ['bds','lns','rapperland'].forEach(g=>{
+    qs.push({ text:'¿Es de '+RF_GROUPS[g].name+'?', answer: video.group === g });
+  });
+  const thresholds = [10000,50000,100000,500000,1000000,5000000,10000000];
+  const nearby = thresholds.filter(t => t <= video.views*3 && t >= video.views/6);
+  const pickFrom = nearby.length ? nearby : thresholds;
+  const viewsThreshold = pickFrom[Math.floor(Math.random()*pickFrom.length)];
+  qs.push({ text:'¿Tiene más de '+rfFormatViews(viewsThreshold)+' vistas?', answer: video.views > viewsThreshold });
+
+  const refLabels = {anime:'un anime', videojuego:'un videojuego', serie_pelicula:'una serie o película'};
+  Object.entries(refLabels).forEach(([key,label])=>{
+    qs.push({ text:'¿Está basado en '+label+'?', answer: video.reference === key });
+  });
+
+  const y = video.year;
+  const candidateYear = Math.random() < 0.5 ? y : (y + (Math.random()<0.5?-1:1));
+  qs.push({ text:'¿Se publicó en '+candidateYear+'?', answer: y === candidateYear });
+
+  const authorNames = [...new Set(pool.map(v=>v.channelName))];
+  const decoys = authorNames.filter(n=>n!==video.channelName);
+  const candidateAuthors = new Set();
+  candidateAuthors.add(Math.random() < 0.4 || !decoys.length ? video.channelName : decoys[Math.floor(Math.random()*decoys.length)]);
+  while(candidateAuthors.size < 2 && decoys.length){ candidateAuthors.add(decoys[Math.floor(Math.random()*decoys.length)]); }
+  candidateAuthors.forEach(name=>{ qs.push({ text:'¿Es de '+name+'?', answer: video.channelName === name }); });
+
+  if(video.country){
+    const countries = [...new Set(pool.map(v=>v.country).filter(Boolean))];
+    const decoyCountries = countries.filter(c=>c!==video.country);
+    const chosenCountry = (Math.random()<0.5 || !decoyCountries.length) ? video.country : decoyCountries[Math.floor(Math.random()*decoyCountries.length)];
+    try{
+      const dn = new Intl.DisplayNames(['es'], {type:'region'});
+      qs.push({ text:'¿El autor es de '+dn.of(chosenCountry)+'?', answer: chosenCountry === video.country });
+    }catch(e){}
+  }
+  for(let i=qs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [qs[i],qs[j]]=[qs[j],qs[i]]; }
+  return qs;
+}
+
+function rfRenderHearts(){
+  let out = '';
+  for(let i=0;i<RF_MAX_HEARTS;i++){ out += i < rfHearts ? '❤️' : '<span class="lost">❤️</span>'; }
+  document.getElementById('rfHearts').innerHTML = out;
+}
+function rfRenderThumb(){
+  const hiddenEl = document.getElementById('rfThumbHidden');
+  const img = document.getElementById('rfThumbImg');
+  if(rfDifficulty === 'sin_portada'){ hiddenEl.classList.remove('hidden'); img.classList.add('hidden'); return; }
+  hiddenEl.classList.add('hidden');
+  img.classList.remove('hidden');
+  img.src = rfCurrent.thumbnail;
+  img.alt = '';
+  const lost = RF_MAX_HEARTS - rfHearts;
+  img.style.filter = 'blur(' + (RF_BLUR_LEVELS[lost] ?? RF_BLUR_LEVELS[0]) + 'px)';
+}
+function rfRevealThumbFully(){
+  document.getElementById('rfThumbHidden').classList.add('hidden');
+  const img = document.getElementById('rfThumbImg');
+  img.classList.remove('hidden');
+  img.src = rfCurrent.thumbnail;
+  img.style.filter = 'none';
+}
+function rfRenderQuestions(){
+  const wrap = document.getElementById('rfQuestions');
+  wrap.innerHTML = '';
+  rfRevealed.forEach(q=>{
+    const chip = document.createElement('div');
+    chip.className = 'rf-q-btn rf-q-answered';
+    chip.innerHTML = q.text + ' → <b class="' + (q.answer?'rf-q-yes':'rf-q-no') + '">' + (q.answer?'Sí':'No') + '</b>';
+    wrap.appendChild(chip);
+  });
+  rfQuestionQueue.forEach((q, idx)=>{
+    const btn = document.createElement('button');
+    btn.className = 'rf-q-btn';
+    btn.textContent = '🔓 ' + q.text;
+    btn.addEventListener('click', ()=>rfRevealQuestion(idx));
+    wrap.appendChild(btn);
+  });
+}
+function rfRevealQuestion(idx){
+  const [q] = rfQuestionQueue.splice(idx,1);
+  rfRevealed.push(q);
+  rfRenderQuestions();
+}
+function rfAutoRevealOnFail(){
+  if(rfQuestionQueue.length){
+    rfRevealed.push(rfQuestionQueue.shift());
+    rfRenderQuestions();
+  }
+}
+
+function rfEnterGame(){
+  document.getElementById('rfModeTag').textContent = '🔥 Reto diario';
+  document.getElementById('rfCatTag').textContent = rfCategoryLabel(rfCategory);
+  document.getElementById('rfDiffTag').textContent = RF_DIFFS.find(d=>d.key===rfDifficulty).name;
+  document.getElementById('rfNextDiffBtn').classList.remove('hidden');
+  document.getElementById('rfStreakLive').classList.add('hidden');
+  rfShowScreen('game');
+  rfStartRound(false);
+}
+function rfEnterStreakMode(){
+  document.getElementById('rfModeTag').textContent = '🎲 Modo libre';
+  document.getElementById('rfCatTag').textContent = rfCategoryLabel(rfCategory);
+  document.getElementById('rfDiffTag').textContent = RF_DIFFS.find(d=>d.key===rfDifficulty).name;
+  document.getElementById('rfNextDiffBtn').classList.add('hidden');
+  document.getElementById('rfStreakLive').classList.remove('hidden');
+  rfShowScreen('game');
+  rfStreakVideos = []; rfStreakCount = 0;
+  rfStartRound(true);
+}
+
+function rfStartRound(isStreak){
+  document.getElementById('rfEmptyMsg').classList.add('hidden');
+  document.getElementById('rfRoundDone').classList.add('hidden');
+  rfCloseResultModal();
+  const list = rfFilteredPool();
+  if(!list.length){
+    document.getElementById('rfEmptyMsg').classList.remove('hidden');
+    ['rfGuessInput','rfGuessBtn','rfGiveupBtn'].forEach(id=>document.getElementById(id).disabled=true);
+    return;
+  }
+  rfCurrent = rfPickVideo();
+  rfRecordRecent(rfCurrent.id);
+  rfHearts = RF_MAX_HEARTS;
+  rfSelected = null;
+  rfRevealed = [];
+  rfQuestionQueue = rfBuildQuestionBank(rfCurrent, list);
+  document.getElementById('rfGuessInput').value = '';
+  const errEl = document.getElementById('rfErrText'); errEl.textContent=''; errEl.style.color='';
+  document.getElementById('rfDropdown').classList.add('hidden');
+  ['rfGuessInput','rfGuessBtn','rfGiveupBtn'].forEach(id=>document.getElementById(id).disabled=false);
+  rfRenderHearts();
+  rfRenderThumb();
+  rfRenderQuestions();
+  if(isStreak){ document.getElementById('rfStreakLive').textContent = '🔥 Racha: ' + rfStreakCount; }
+}
+
+function rfRenderDropdown(query){
+  const dd = document.getElementById('rfDropdown');
+  if(!query){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
+  const q = norm(query);
+  const source = rfMode === 'libre' ? rfPool.filter(v=>rfSongBelongs(v, rfCategory)) : rfFilteredPool();
+  const matches = source.filter(v=>norm(v.title).includes(q) || norm(v.channelName).includes(q)).slice(0,7);
+  if(!matches.length){ dd.classList.add('hidden'); dd.innerHTML=''; return; }
+  dd.innerHTML = '';
+  matches.forEach(m=>{
+    const item = document.createElement('div');
+    item.className = 'dd-item';
+    item.innerHTML = m.title + '<small>' + m.channelName + '</small>';
+    item.addEventListener('click', ()=>{
+      rfSelected = m;
+      document.getElementById('rfGuessInput').value = m.title + ' — ' + m.channelName;
+      dd.classList.add('hidden'); dd.innerHTML='';
+    });
+    dd.appendChild(item);
+  });
+  dd.classList.remove('hidden');
+}
+
+async function rfLoadStats(){ return lsGet('refdle-stats', {played:0,wins:0,streak:0}); }
+async function rfSaveStats(s){ lsSet('refdle-stats', s); }
+
+function rfSubmitGuess(){
+  const errEl = document.getElementById('rfErrText');
+  if(!rfSelected){ errEl.style.color=''; errEl.textContent='Selecciona un video de la lista antes de adivinar.'; return; }
+  errEl.style.color=''; errEl.textContent='';
+  const correct = rfSelected.id === rfCurrent.id;
+  document.getElementById('rfGuessInput').value = '';
+  rfSelected = null;
+  if(correct){
+    if(rfMode === 'libre'){ rfHandleStreakCorrect(); } else { rfShowReveal(true, rfCurrent); }
+    return;
+  }
+  rfHearts -= 1;
+  rfRenderHearts();
+  rfRenderThumb();
+  rfAutoRevealOnFail();
+  if(rfHearts <= 0){
+    if(rfMode === 'libre'){ rfEndStreakRun(); } else { rfShowReveal(false, rfCurrent); }
+  }
+}
+function rfGiveUp(){
+  if(rfMode === 'libre'){ rfEndStreakRun(); } else { rfShowReveal(false, rfCurrent); }
+}
+
+function rfCloseResultModal(){ document.getElementById('rfResultModal').classList.add('hidden'); }
+function rfOpenResultModal(){ document.getElementById('rfResultModal').classList.remove('hidden'); }
+function rfShowResultLockNote(){ document.getElementById('rfResultLockNote').classList.remove('hidden'); startLockCountdown('rfResultLockCountdown'); }
+function rfHideResultLockNote(){ document.getElementById('rfResultLockNote').classList.add('hidden'); stopLockCountdown(); }
+
+async function rfShowReveal(won, video){
+  ['rfGuessInput','rfGuessBtn','rfGiveupBtn'].forEach(id=>document.getElementById(id).disabled=true);
+  document.getElementById('rfDropdown').classList.add('hidden');
+  rfRevealThumbFully();
+
+  const stats = await rfLoadStats();
+  stats.played += 1;
+  if(won){ stats.wins += 1; stats.streak += 1; } else { stats.streak = 0; }
+  await rfSaveStats(stats);
+
+  document.getElementById('rfStatPlayed').textContent = stats.played;
+  document.getElementById('rfStatWinPct').textContent = stats.played ? Math.round((stats.wins/stats.played)*100)+'%' : '0%';
+  document.getElementById('rfStatStreak').textContent = stats.streak;
+
+  const tag = document.getElementById('rfResultTag');
+  tag.textContent = won ? '¡Ganaste!' : 'Fallaste';
+  tag.className = 'result-tag ' + (won?'tag-win':'tag-lose');
+  document.getElementById('rfRevealArt').src = video.thumbnail;
+  document.getElementById('rfRevealTitle').textContent = video.title;
+  document.getElementById('rfRevealArtist').textContent = video.channelName;
+  document.getElementById('rfRevealGroup').textContent = video.group ? rfCategoryLabel(video.group) : 'Sin liga';
+  document.getElementById('rfRevealViews').textContent = rfFormatViews(video.views) + ' vistas';
+  document.getElementById('rfRevealYear').textContent = video.year;
+  document.getElementById('rfRevealLink').href = video.url || '#';
+
+  rfSaveDailyRecord(rfCategory, rfDifficulty, {
+    date: todayStr(), won,
+    video: { id:video.id, title:video.title, channelName:video.channelName, thumbnail:video.thumbnail, url:video.url, group:video.group, views:video.views, year:video.year },
+    category: rfCategory, difficulty: rfDifficulty
+  });
+  rfShowResultLockNote();
+  document.getElementById('rfRoundDone').classList.remove('hidden');
+  rfOpenResultModal();
+}
+async function rfOpenDiarioLockedRecap(rec){
+  const stats = await rfLoadStats();
+  document.getElementById('rfStatPlayed').textContent = stats.played;
+  document.getElementById('rfStatWinPct').textContent = stats.played ? Math.round((stats.wins/stats.played)*100)+'%' : '0%';
+  document.getElementById('rfStatStreak').textContent = stats.streak;
+  const tag = document.getElementById('rfResultTag');
+  tag.textContent = rec.won ? '¡Ganaste!' : 'Fallaste';
+  tag.className = 'result-tag ' + (rec.won?'tag-win':'tag-lose');
+  const v = rec.video || {};
+  document.getElementById('rfRevealArt').src = v.thumbnail || '';
+  document.getElementById('rfRevealTitle').textContent = v.title || '';
+  document.getElementById('rfRevealArtist').textContent = v.channelName || '';
+  document.getElementById('rfRevealGroup').textContent = v.group ? rfCategoryLabel(v.group) : 'Sin liga';
+  document.getElementById('rfRevealViews').textContent = v.views != null ? rfFormatViews(v.views) + ' vistas' : '';
+  document.getElementById('rfRevealYear').textContent = v.year || '';
+  document.getElementById('rfRevealLink').href = v.url || '#';
+  rfShowResultLockNote();
+  rfOpenResultModal();
+}
+
+function rfHandleStreakCorrect(){
+  rfStreakVideos.push({ id:rfCurrent.id, title:rfCurrent.title, channelName:rfCurrent.channelName, thumbnail:rfCurrent.thumbnail, url:rfCurrent.url });
+  rfStreakCount = rfStreakVideos.length;
+  const errEl = document.getElementById('rfErrText');
+  errEl.style.color = 'var(--facil)';
+  errEl.textContent = '¡Correcto! Va el próximo…';
+  document.getElementById('rfStreakLive').textContent = '🔥 Racha: ' + rfStreakCount;
+  ['rfGuessInput','rfGuessBtn','rfGiveupBtn'].forEach(id=>document.getElementById(id).disabled=true);
+  setTimeout(()=>rfStartRound(true), 700);
+}
+async function rfEndStreakRun(){
+  ['rfGuessInput','rfGuessBtn','rfGiveupBtn'].forEach(id=>document.getElementById(id).disabled=true);
+  document.getElementById('rfDropdown').classList.add('hidden');
+  rfRevealThumbFully();
+  const finalStreak = rfStreakVideos.length;
+  const lost = rfCurrent ? { id:rfCurrent.id, title:rfCurrent.title, channelName:rfCurrent.channelName, thumbnail:rfCurrent.thumbnail, url:rfCurrent.url } : null;
+  let best = lsGet('refdle-streak-best', 0);
+  if(finalStreak > best){ best = finalStreak; lsSet('refdle-streak-best', best); }
+  rfRenderStreakRecap(finalStreak, best, rfStreakVideos, lost);
+  document.getElementById('rfRoundDone').classList.remove('hidden');
+  document.getElementById('rfStreakModal').classList.remove('hidden');
+}
+function rfRenderStreakRecap(finalStreak, best, list, lost){
+  document.getElementById('rfStreakFinal').textContent = finalStreak;
+  document.getElementById('rfStreakBestNum').textContent = best;
+  const lostWrap = document.getElementById('rfStreakLostWrap');
+  if(lost){
+    lostWrap.classList.remove('hidden');
+    document.getElementById('rfStreakLostArt').src = lost.thumbnail || '';
+    document.getElementById('rfStreakLostTitle').textContent = lost.title || '';
+    document.getElementById('rfStreakLostArtist').textContent = lost.channelName || '';
+    document.getElementById('rfStreakLostLink').href = lost.url || '#';
+  } else { lostWrap.classList.add('hidden'); }
+  const listEl = document.getElementById('rfStreakSongList');
+  listEl.innerHTML = '';
+  if(!list.length){ listEl.innerHTML = '<li><span>Ningún video adivinado esta vez.</span></li>'; }
+  else{
+    list.forEach(v=>{
+      const li = document.createElement('li');
+      const img = document.createElement('img'); img.className='gh-thumb'; img.alt=''; img.src=v.thumbnail||'';
+      const info = document.createElement('span'); info.className='gh-info';
+      info.innerHTML = '<span class="gh-title">'+v.title+'</span><span class="gh-artist">'+v.channelName+'</span>';
+      li.appendChild(img); li.appendChild(info);
+      listEl.appendChild(li);
+    });
+  }
+}
+
+document.getElementById('rfGuessBtn').addEventListener('click', rfSubmitGuess);
+document.getElementById('rfGiveupBtn').addEventListener('click', rfGiveUp);
+document.getElementById('rfGuessInput').addEventListener('input', (e)=>{ rfSelected=null; rfRenderDropdown(e.target.value); });
+document.getElementById('rfGuessInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') rfSubmitGuess(); });
+document.addEventListener('click', (e)=>{ if(!e.target.closest('#rfGameScreen .guess-box')) document.getElementById('rfDropdown').classList.add('hidden'); });
+
+document.getElementById('rfPickDiario').addEventListener('click', ()=>{ rfMode='diario'; rfShowScreen('diff'); });
+document.getElementById('rfPickLibre').addEventListener('click', ()=>{ rfMode='libre'; rfShowScreen('diff'); });
+document.getElementById('rfBackToCategory').addEventListener('click', ()=>{ rfShowScreen('category'); });
+document.getElementById('rfBackToMode').addEventListener('click', ()=>{ rfShowScreen('mode'); });
+document.getElementById('rfBackToGameChoiceFromCat').addEventListener('click', backToGameChoice);
+document.getElementById('rfBackToGameChoiceFromError').addEventListener('click', backToGameChoice);
+document.getElementById('rfMenuBtn').addEventListener('click', ()=>{ rfShowScreen('category'); });
+document.getElementById('rfNextDiffBtn').addEventListener('click', ()=>{
+  const next = rfNextUnplayedDifficulty(rfDifficulty);
+  if(next){ rfDifficulty = next.key; document.getElementById('rfDiffTag').textContent = next.name; rfStartRound(false); }
+  else { rfShowScreen('diff'); }
+});
+document.getElementById('rfModalNextDiffBtn').addEventListener('click', ()=>{
+  rfCloseResultModal(); rfHideResultLockNote();
+  const next = rfNextUnplayedDifficulty(rfDifficulty);
+  if(next){ rfDifficulty = next.key; document.getElementById('rfDiffTag').textContent = next.name; rfStartRound(false); }
+  else { rfShowScreen('diff'); }
+});
+document.getElementById('rfModalDiffBtn').addEventListener('click', ()=>{ rfCloseResultModal(); rfHideResultLockNote(); rfShowScreen('diff'); });
+document.getElementById('rfModalMenuBtn').addEventListener('click', ()=>{ rfCloseResultModal(); rfHideResultLockNote(); rfShowScreen('category'); });
+document.getElementById('rfModalCloseBtn').addEventListener('click', ()=>{ rfCloseResultModal(); rfHideResultLockNote(); });
+document.getElementById('rfReopenModalBtn').addEventListener('click', rfOpenResultModal);
+document.getElementById('rfResultModal').addEventListener('click', (e)=>{ if(e.target.id==='rfResultModal'){ rfCloseResultModal(); rfHideResultLockNote(); } });
+
+document.getElementById('rfStreakCloseBtn').addEventListener('click', ()=>{ document.getElementById('rfStreakModal').classList.add('hidden'); });
+document.getElementById('rfStreakRetryBtn').addEventListener('click', ()=>{ document.getElementById('rfStreakModal').classList.add('hidden'); rfEnterStreakMode(); });
+document.getElementById('rfStreakMenuBtn').addEventListener('click', ()=>{ document.getElementById('rfStreakModal').classList.add('hidden'); rfShowScreen('category'); });
+document.getElementById('rfStreakModal').addEventListener('click', (e)=>{ if(e.target.id==='rfStreakModal'){ document.getElementById('rfStreakModal').classList.add('hidden'); } });
+
+document.getElementById('rfRefreshCatalogBtn').addEventListener('click', async ()=>{ await rfClearCachedCatalog(); location.reload(); });
+document.getElementById('rfRetryBtn').addEventListener('click', async ()=>{ await rfClearCachedCatalog(); rfEnter(); });
+</script>
+
 </body>
 </html>
