@@ -72,8 +72,8 @@ const EXCLUDE_TITLE_PATTERNS = [
   /cerraron mi canal/i, /me devolvieron/i, /golden play/i, /\bteaser\b/i,
   /especial \d+ ?k/i, /lo mejor del/i, /\btop \d+\b/i, /ranking/i,
   /opening.*espa[ñn]ol latino/i, /cover.*opening/i, /unboxing/i, /haul\b/i,
-  /pregúntame|preguntame/i, /mi historia/i, /q&a/i,
-  /reto del espejo/i, /mirror challenge/i, /reto viral/i, /challenge\b/i,
+  /pregúntame|preguntame/i, /q&a/i,
+  /reto del espejo/i, /mirror challenge/i, /reto viral/i,
   /probando (filtros|efectos)/i, /detrás de c[aá]maras/i, /making of/i,
 ];
 
@@ -192,24 +192,27 @@ function parseDurationSeconds(iso) {
 }
 
 const MIN_DURATION_SECONDS = 60; // descarta shorts/teasers/intros muy cortos
+// Un video "estrenado" (premiere) en YouTube también trae liveStreamingDetails,
+// aunque sea simplemente la canción normal con chat en vivo durante el estreno.
+// Solo tratamos como DIRECTO real algo con liveStreamingDetails Y una duración
+// larga (más de lo que dura una canción) — así no perdemos canciones estrenadas
+// como premiere, que es una práctica muy común entre estos raperos.
+const LIVE_MIN_DURATION_TO_EXCLUDE = 600; // 10 minutos
 
-function isSong(video) {
+function getExcludeReason(video) {
   const snip = video.snippet;
-  // Directo en curso o programado
-  if (snip.liveBroadcastContent && snip.liveBroadcastContent !== 'none') return false;
-  // Directo ya terminado (su VOD queda con liveStreamingDetails aunque ya no esté "en vivo")
-  if (video.liveStreamingDetails) return false;
+  if (snip.liveBroadcastContent && snip.liveBroadcastContent !== 'none') return 'en_vivo_ahora';
   const duration = parseDurationSeconds(video.contentDetails && video.contentDetails.duration);
-  if (duration > 0 && duration < MIN_DURATION_SECONDS) return false;
+  if (video.liveStreamingDetails && duration > LIVE_MIN_DURATION_TO_EXCLUDE) return 'directo_largo';
+  if (duration > 0 && duration < MIN_DURATION_SECONDS) return 'muy_corto';
   const title = snip.title || '';
   const description = snip.description || '';
-  if (/#shorts?\b/i.test(title) || /#shorts?\b/i.test(description)) return false;
-  if (EXCLUDE_TITLE_PATTERNS.some(rx => rx.test(title))) return false;
-  // Nota: NO filtramos por categoryId (10 = Música). Muchos raperos no
-  // etiquetan sus subidas recientes con esa categoría y eso hacía que
-  // canciones nuevas de canales como ZerØ no entraran al catálogo.
-  return true;
+  if (/#shorts?\b/i.test(title) || /#shorts?\b/i.test(description)) return 'hashtag_shorts';
+  const matchedPattern = EXCLUDE_TITLE_PATTERNS.find(rx => rx.test(title));
+  if (matchedPattern) return 'patron_titulo:' + matchedPattern;
+  return null;
 }
+function isSong(video) { return getExcludeReason(video) === null; }
 
 function inferReference(video) {
   const text = norm((video.snippet.title || '') + ' ' + (video.snippet.description || ''));
@@ -235,9 +238,11 @@ async function main() {
       const ids = [...new Set([...uploadsIds, ...recentIds])];
       const videos = await getVideosDetails(ids);
       let count = 0;
+      const reasonCounts = {};
       for (const v of videos) {
         if (MANUAL_EXCLUDE_IDS.includes(v.id)) continue;
-        if (!isSong(v)) continue;
+        const reason = getExcludeReason(v);
+        if (reason) { reasonCounts[reason] = (reasonCounts[reason] || 0) + 1; continue; }
         catalog.push({
           id: v.id,
           title: v.snippet.title,
@@ -257,6 +262,11 @@ async function main() {
         count++;
       }
       console.log(`✔ ${ch.name}: ${count} canciones de ${ids.length} videos totales`);
+      if (ids.length && count / ids.length < 0.4) {
+        const breakdown = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1])
+          .map(([reason, n]) => `${reason}=${n}`).join(', ');
+        console.log(`   (descartados) ${breakdown}`);
+      }
       if (count === 0) missing.push(ch.name);
     } catch (e) {
       console.error(`✘ Error con ${ch.name}:`, e.message);
