@@ -207,6 +207,10 @@
   .rf-q-no{color:var(--experto) !important;}
   .rf-q-active{border-color:var(--accent);color:var(--accent);}
   .rf-hint-note{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);text-align:center;margin:0 0 4px;}
+  .rf-q-row{display:flex;gap:10px;margin:14px 0 10px;flex-wrap:wrap;}
+  .rf-select{flex:1;min-width:140px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg-panel-2);color:var(--ink);font-family:'Manrope',sans-serif;font-size:13px;}
+  .rf-select:disabled{opacity:0.5;}
+  .rf-artist-tile{background:linear-gradient(135deg,#8E8AB5,#4C4870);}
 
   /* Miniaturas de REFDLE al revelar: 16:9 completas, no cuadradas/recortadas como en FREEKDLE */
   #rfRevealArt{width:100%;max-width:340px;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:16px;margin-bottom:14px;}
@@ -404,15 +408,20 @@
             <img id="rfThumbImg" src="" alt="" class="hidden">
           </div>
 
-          <p class="rf-hint-note">Cada fallo revela una pista automática. También puedes elegir una categoría y luego una pregunta para desbloquearla.</p>
-          <p class="section-label" style="margin-top:4px;">1. Elige una categoría</p>
-          <div class="rf-questions" id="rfQCategories"></div>
-          <p class="section-label" id="rfQItemsLabel" style="display:none;">2. Elige una pregunta</p>
-          <div class="rf-questions" id="rfQItems"></div>
+          <p class="rf-hint-note">Cada fallo revela una pista automática. También puedes elegir una categoría y una pregunta abajo.</p>
+          <div class="rf-q-row">
+            <select id="rfCatSelect" class="rf-select">
+              <option value="">Elige una categoría…</option>
+            </select>
+            <select id="rfItemSelect" class="rf-select" disabled>
+              <option value="">Elige una categoría primero</option>
+            </select>
+          </div>
           <p class="section-label" id="rfHistoryLabel" style="display:none;">Historial de pistas</p>
           <ul class="guess-history" id="rfQHistory"></ul>
+          <p class="rf-hint-note" id="rfQCounter" style="margin-top:10px;">Preguntas usadas: 0</p>
 
-          <div class="guess-box" style="margin-top:16px;">
+          <div class="guess-box" style="margin-top:6px;">
             <input type="text" id="rfGuessInput" placeholder="Busca un video..." autocomplete="off">
             <button class="btn-pill primary" id="rfGuessBtn">Adivinar</button>
             <div class="dropdown hidden" id="rfDropdown"></div>
@@ -422,6 +431,7 @@
           <div class="btn-row">
             <button class="btn-pill ghost" id="rfGiveupBtn">Rendirse</button>
           </div>
+
 
           <div class="round-done hidden" id="rfRoundDone">
             <p class="rd-text">Ronda terminada.</p>
@@ -1557,6 +1567,9 @@ const RF_CACHE_KEY = 'refdle-catalog-cache-v1';
 const RF_CACHE_TTL = 24 * 60 * 60 * 1000; // 24h — igual a la frecuencia del GitHub Action
 const RF_MAX_HEARTS = 3;
 const RF_GROUPS = { bds:{name:'BDS'}, lns:{name:'LNS'}, rapperland:{name:'Rapperland'} };
+// Países "cercanos" que siempre se ofrecen como opción en la categoría País,
+// aunque ningún rapero del catálogo sea realmente de ahí.
+const RF_NEARBY_COUNTRIES = ['CO','VE','EC','PE','MX','AR','CL','ES','US','PA','CR','DO','BO','PY','UY','GT','HN','SV','NI','PR'];
 const RF_DIFFS = [
   { key:'sin_portada', name:'Sin portada', tag:'Solo pistas de texto' },
   { key:'blur', name:'Con portada difuminada', tag:'Miniatura con blur fuerte' }
@@ -1578,8 +1591,18 @@ let rfRecentMap = {};
 let rfStreakVideos = [];
 let rfStreakCount = 0;
 
-function rfSongBelongs(v, cat){ return cat === 'todos' ? true : v.group === cat; }
-function rfCategoryLabel(cat){ if(cat==='todos') return 'Mix (todos)'; return RF_GROUPS[cat] ? RF_GROUPS[cat].name : cat; }
+function rfSongBelongs(v, cat){
+  if(cat === 'todos') return true;
+  if(RF_GROUPS[cat]) return v.group === cat;
+  return v.channelKey === cat; // modo individual de un artista
+}
+function rfIsIndividualCategory(cat){ return cat !== 'todos' && !RF_GROUPS[cat]; }
+function rfCategoryLabel(cat){
+  if(cat==='todos') return 'Mix (todos)';
+  if(RF_GROUPS[cat]) return RF_GROUPS[cat].name;
+  const v = rfPool.find(x=>x.channelKey===cat);
+  return v ? v.channelName : cat;
+}
 function rfFilteredPool(){ return rfPool.filter(v=>rfSongBelongs(v, rfCategory)); }
 function rfFormatViews(n){
   if(n >= 1000000){ const m = n/1000000; return (Math.round(m*10)/10) + ' millones'; }
@@ -1648,6 +1671,15 @@ function rfBuildCategoryScreen(){
     tile.className = 'cat-tile rf-group-' + g;
     tile.innerHTML = '<span class="cat-emoji">🔀</span>' + RF_GROUPS[g].name;
     tile.addEventListener('click', ()=>{ rfCategory=g; document.getElementById('rfModeCatLabel').textContent='Liga: '+rfCategoryLabel(rfCategory); rfShowScreen('mode'); });
+    grid.appendChild(tile);
+  });
+  const artists = [...new Map(rfPool.map(v=>[v.channelKey, v.channelName])).entries()]
+    .sort((a,b)=>a[1].localeCompare(b[1]));
+  artists.forEach(([key, name])=>{
+    const tile = document.createElement('button');
+    tile.className = 'cat-tile rf-artist-tile';
+    tile.innerHTML = '<span class="cat-emoji">🎤</span>' + name;
+    tile.addEventListener('click', ()=>{ rfCategory=key; document.getElementById('rfModeCatLabel').textContent='Modo: '+rfCategoryLabel(rfCategory); rfShowScreen('mode'); });
     grid.appendChild(tile);
   });
 }
@@ -1719,18 +1751,19 @@ function rfPickVideo(){
   return candidates[Math.floor(Math.random()*candidates.length)];
 }
 
+function rfDisplayNames(){
+  try{ return new Intl.DisplayNames(['es'], {type:'region'}); }catch(e){ return null; }
+}
 function rfShuffle(arr){
   const a = arr.slice();
   for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
   return a;
 }
-function rfDisplayNames(){
-  try{ return new Intl.DisplayNames(['es'], {type:'region'}); }catch(e){ return null; }
-}
 // Reparte un máximo total de preguntas entre categorías, dando prioridad a
-// que cada categoría tenga al menos 1, y repartiendo el resto round-robin.
+// que cada categoría tenga al menos 1 (si tiene), y repartiendo el resto
+// round-robin al azar, para que la ronda sea difícil de verdad.
 function rfCapCategories(cats, maxTotal){
-  const result = cats.map(c=>({key:c.key, label:c.label, items:[]}));
+  const result = cats.map(c=>({ key:c.key, label:c.label, items:[] }));
   const remaining = cats.map(c=>rfShuffle(c.items));
   let total = 0;
   let progressed = true;
@@ -1742,11 +1775,13 @@ function rfCapCategories(cats, maxTotal){
   }
   return result.filter(c=>c.items.length);
 }
+const RF_MAX_QUESTIONS = 10;
 
 // --- Banco dinámico de preguntas sí/no, organizado en CATEGORÍAS (grupo,
-// país, autor, referencia, año, vistas, colaboración). Cada ronda arma un
-// máximo de 10 preguntas en total, repartidas entre categorías. ---
-function rfBuildQuestionCategories(video, pool){
+// país, autor, referencia, año, vistas, colaboración). Cada categoría incluye
+// TODAS sus opciones elegibles (no solo señuelos al azar). En los modos de
+// artista individual se omite la categoría "Autor / rapero" (sería obvia). ---
+function rfBuildQuestionCategories(video, pool, isIndividualArtistMode){
   const cats = [];
   const dn = rfDisplayNames();
 
@@ -1756,56 +1791,60 @@ function rfBuildQuestionCategories(video, pool){
     items: ['bds','lns','rapperland'].map(g=>({ text:'¿Es de '+RF_GROUPS[g].name+'?', answer: video.group === g }))
   });
 
-  // País del autor
-  const countries = [...new Set(pool.map(v=>v.country).filter(Boolean))];
-  if(video.country && countries.length){
-    const decoyCountries = countries.filter(c=>c!==video.country);
-    const chosen = rfShuffle(decoyCountries).slice(0,2);
-    const countryItems = [video.country, ...chosen].map(c=>({
-      text:'¿El autor es de '+(dn?dn.of(c):c)+'?', answer: c === video.country
-    }));
-    cats.push({ key:'pais', label:'País del autor', items: rfShuffle(countryItems) });
+  // País del autor — siempre ofrece la lista fija de países cercanos, aunque
+  // ningún rapero del catálogo sea realmente de ahí.
+  if(video.country){
+    const candidateCountries = Array.from(new Set([...RF_NEARBY_COUNTRIES, video.country]));
+    cats.push({
+      key:'pais', label:'País del autor',
+      items: candidateCountries.map(c=>({ text:'¿El autor es de '+(dn?dn.of(c):c)+'?', answer: c === video.country }))
+    });
   }
 
-  // Autor / rapero individual
-  const authorNames = [...new Set(pool.map(v=>v.channelName))];
-  const decoyAuthors = rfShuffle(authorNames.filter(n=>n!==video.channelName)).slice(0,3);
-  const authorItems = rfShuffle([video.channelName, ...decoyAuthors]).map(name=>({
-    text:'¿Es de '+name+'?', answer: video.channelName === name
-  }));
-  cats.push({ key:'autor', label:'Autor / rapero', items: authorItems });
+  // Autor / rapero — se omite en modos individuales (solo hay un autor posible)
+  if(!isIndividualArtistMode){
+    const authorNames = [...new Set(pool.map(v=>v.channelName))];
+    cats.push({
+      key:'autor', label:'Autor / rapero',
+      items: authorNames.map(name=>({ text:'¿Es de '+name+'?', answer: video.channelName === name }))
+    });
+  }
 
   // Referencia / temática
-  const refLabels = {anime:'un anime', videojuego:'un videojuego', serie_pelicula:'una serie o película'};
+  const refLabels = { anime:'un anime', videojuego:'un videojuego', serie_pelicula:'una serie o película', ninguna:'ninguna referencia (es original)' };
   cats.push({
     key:'referencia', label:'Referencia / temática',
-    items: Object.entries(refLabels).map(([key,label])=>({ text:'¿Está basado en '+label+'?', answer: video.reference === key }))
+    items: Object.entries(refLabels).map(([key,label])=>({
+      text:'¿Está basado en '+label+'?',
+      answer: key === 'ninguna' ? !video.reference : video.reference === key
+    }))
   });
 
-  // Año de publicación
-  const years = [...new Set(pool.map(v=>v.year).filter(Boolean))];
-  const decoyYears = rfShuffle(years.filter(y=>y!==video.year)).slice(0,2);
-  const yearItems = rfShuffle([video.year, ...decoyYears]).map(y=>({ text:'¿Se publicó en '+y+'?', answer: y === video.year }));
-  cats.push({ key:'anio', label:'Año de publicación', items: yearItems });
+  // Año de publicación — todos los años presentes en el catálogo filtrado
+  const years = [...new Set(pool.map(v=>v.year).filter(Boolean))].sort();
+  cats.push({
+    key:'anio', label:'Año de publicación',
+    items: years.map(y=>({ text:'¿Se publicó en '+y+'?', answer: y === video.year }))
+  });
 
   // Vistas
   const thresholds = [10000,50000,100000,500000,1000000,5000000,10000000];
-  const nearby = thresholds.filter(t => t <= video.views*4 && t >= video.views/8);
-  const chosenThresholds = rfShuffle(nearby.length ? nearby : thresholds).slice(0,2);
   cats.push({
     key:'vistas', label:'Vistas',
-    items: chosenThresholds.map(t=>({ text:'¿Tiene más de '+rfFormatViews(t)+' vistas?', answer: video.views > t }))
+    items: thresholds.map(t=>({ text:'¿Tiene más de '+rfFormatViews(t)+' vistas?', answer: video.views > t }))
   });
 
   // Colaboraciones (¿el título/descripción menciona a otro rapero del catálogo?)
   const fullText = norm((video.title||'') + ' ' + (video.description||''));
-  const collabCandidates = rfShuffle(authorNames.filter(n=>n!==video.channelName)).slice(0,3);
-  const collabItems = collabCandidates.map(name=>({
-    text:'¿Tiene una colaboración con '+name+'?', answer: fullText.includes(norm(name))
-  }));
-  if(collabItems.length) cats.push({ key:'colaboracion', label:'Colaboraciones', items: collabItems });
+  const otherAuthors = [...new Set(pool.map(v=>v.channelName))].filter(n=>n!==video.channelName);
+  if(otherAuthors.length){
+    cats.push({
+      key:'colaboracion', label:'Colaboraciones',
+      items: otherAuthors.map(name=>({ text:'¿Tiene una colaboración con '+name+'?', answer: fullText.includes(norm(name)) }))
+    });
+  }
 
-  return rfCapCategories(cats, 10);
+  return rfCapCategories(cats.filter(c=>c.items.length), RF_MAX_QUESTIONS);
 }
 
 function rfRenderHearts(){
@@ -1832,40 +1871,30 @@ function rfRevealThumbFully(){
   img.style.filter = 'none';
 }
 
-// --- Render de las dos listas (1. categoría, 2. pregunta) + historial ---
+// --- Render de los dos <select> (1. categoría, 2. pregunta), el contador y
+// el historial de pistas ya reveladas. ---
 function rfRenderQuestions(){
-  const catWrap = document.getElementById('rfQCategories');
-  const itemWrap = document.getElementById('rfQItems');
-  const itemLabel = document.getElementById('rfQItemsLabel');
+  const catSelect = document.getElementById('rfCatSelect');
+  const itemSelect = document.getElementById('rfItemSelect');
   const histLabel = document.getElementById('rfHistoryLabel');
   const histWrap = document.getElementById('rfQHistory');
+  const counter = document.getElementById('rfQCounter');
 
-  catWrap.innerHTML = '';
   const pendingCats = rfCategoryBank.filter(c=>c.items.length);
-  pendingCats.forEach(cat=>{
-    const btn = document.createElement('button');
-    btn.className = 'rf-q-btn' + (rfActiveCategoryKey === cat.key ? ' rf-q-active' : '');
-    btn.textContent = cat.label + ' (' + cat.items.length + ')';
-    btn.addEventListener('click', ()=>{ rfActiveCategoryKey = cat.key; rfRenderQuestions(); });
-    catWrap.appendChild(btn);
-  });
+  catSelect.innerHTML = '<option value="">Elige una categoría…</option>' +
+    pendingCats.map(c=>'<option value="'+c.key+'">'+c.label+' ('+c.items.length+')</option>').join('');
+  catSelect.disabled = !pendingCats.length;
 
-  itemWrap.innerHTML = '';
   const activeCat = pendingCats.find(c=>c.key === rfActiveCategoryKey);
   if(activeCat){
-    itemLabel.style.display = '';
-    activeCat.items.forEach((item, idx)=>{
-      const btn = document.createElement('button');
-      btn.className = 'rf-q-btn';
-      btn.textContent = '🔓 ' + item.text;
-      btn.addEventListener('click', ()=>rfRevealItem(activeCat.key, idx));
-      itemWrap.appendChild(btn);
-    });
+    itemSelect.disabled = false;
+    itemSelect.innerHTML = '<option value="">Elige una pregunta…</option>' +
+      activeCat.items.map((it,idx)=>'<option value="'+idx+'">'+it.text+'</option>').join('');
+    catSelect.value = activeCat.key;
   } else {
-    itemLabel.style.display = 'none';
-    if(!pendingCats.length){
-      itemWrap.innerHTML = '<p class="rf-hint-note">Ya no quedan más pistas.</p>';
-    }
+    itemSelect.disabled = true;
+    itemSelect.innerHTML = '<option value="">'+(pendingCats.length ? 'Elige una categoría primero' : 'Sin más pistas')+'</option>';
+    catSelect.value = '';
   }
 
   histWrap.innerHTML = '';
@@ -1880,12 +1909,14 @@ function rfRenderQuestions(){
     li.appendChild(label); li.appendChild(ans);
     histWrap.appendChild(li);
   });
+  counter.textContent = 'Preguntas usadas: ' + rfRevealed.length + '/' + RF_MAX_QUESTIONS;
 }
 function rfRevealItem(catKey, idx){
   const cat = rfCategoryBank.find(c=>c.key === catKey);
   if(!cat) return;
   const [item] = cat.items.splice(idx, 1);
   rfRevealed.push(item);
+  rfActiveCategoryKey = null;
   rfRenderQuestions();
 }
 function rfAutoRevealOnFail(){
@@ -1935,7 +1966,7 @@ function rfStartRound(isStreak){
   rfSelected = null;
   rfRevealed = [];
   rfActiveCategoryKey = null;
-  rfCategoryBank = rfBuildQuestionCategories(rfCurrent, list);
+  rfCategoryBank = rfBuildQuestionCategories(rfCurrent, list, rfIsIndividualCategory(rfCategory));
   document.getElementById('rfGuessInput').value = '';
   const errEl = document.getElementById('rfErrText'); errEl.textContent=''; errEl.style.color='';
   document.getElementById('rfDropdown').classList.add('hidden');
@@ -2103,6 +2134,15 @@ function rfRenderStreakRecap(finalStreak, best, list, lost){
 
 document.getElementById('rfGuessBtn').addEventListener('click', rfSubmitGuess);
 document.getElementById('rfGiveupBtn').addEventListener('click', rfGiveUp);
+document.getElementById('rfCatSelect').addEventListener('change', (e)=>{
+  rfActiveCategoryKey = e.target.value || null;
+  rfRenderQuestions();
+});
+document.getElementById('rfItemSelect').addEventListener('change', (e)=>{
+  const idx = e.target.value;
+  if(idx === '' || !rfActiveCategoryKey) return;
+  rfRevealItem(rfActiveCategoryKey, parseInt(idx, 10));
+});
 document.getElementById('rfGuessInput').addEventListener('input', (e)=>{ rfSelected=null; rfRenderDropdown(e.target.value); });
 document.getElementById('rfGuessInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') rfSubmitGuess(); });
 document.addEventListener('click', (e)=>{ if(!e.target.closest('#rfGameScreen .guess-box')) document.getElementById('rfDropdown').classList.add('hidden'); });
@@ -2141,5 +2181,4 @@ document.getElementById('rfRetryBtn').addEventListener('click', async ()=>{ awai
 </script>
 
 </body>
-</html>
 </html>
