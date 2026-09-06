@@ -1754,28 +1754,7 @@ function rfPickVideo(){
 function rfDisplayNames(){
   try{ return new Intl.DisplayNames(['es'], {type:'region'}); }catch(e){ return null; }
 }
-function rfShuffle(arr){
-  const a = arr.slice();
-  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
-  return a;
-}
-// Reparte un máximo total de preguntas entre categorías, dando prioridad a
-// que cada categoría tenga al menos 1 (si tiene), y repartiendo el resto
-// round-robin al azar, para que la ronda sea difícil de verdad.
-function rfCapCategories(cats, maxTotal){
-  const result = cats.map(c=>({ key:c.key, label:c.label, items:[] }));
-  const remaining = cats.map(c=>rfShuffle(c.items));
-  let total = 0;
-  let progressed = true;
-  while(total < maxTotal && progressed){
-    progressed = false;
-    for(let i=0;i<result.length && total<maxTotal;i++){
-      if(remaining[i].length){ result[i].items.push(remaining[i].shift()); total++; progressed = true; }
-    }
-  }
-  return result.filter(c=>c.items.length);
-}
-const RF_MAX_QUESTIONS = 10;
+const RF_MAX_QUESTIONS = 10; // tope de cuántas pistas puede REVELAR el jugador (no de cuántas se muestran)
 
 // --- Banco dinámico de preguntas sí/no, organizado en CATEGORÍAS (grupo,
 // país, autor, referencia, año, vistas, colaboración). Cada categoría incluye
@@ -1844,7 +1823,19 @@ function rfBuildQuestionCategories(video, pool, isIndividualArtistMode){
     });
   }
 
-  return rfCapCategories(cats.filter(c=>c.items.length), RF_MAX_QUESTIONS);
+  // Duración del video
+  if(video.durationSeconds){
+    const durThresholds = [90, 120, 150, 180, 240, 300]; // 1:30, 2:00, 2:30, 3:00, 4:00, 5:00
+    cats.push({
+      key:'duracion', label:'Duración',
+      items: durThresholds.map(t=>({
+        text:'¿Dura más de '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')+' minutos?',
+        answer: video.durationSeconds > t
+      }))
+    });
+  }
+
+  return cats.filter(c=>c.items.length);
 }
 
 function rfRenderHearts(){
@@ -1881,19 +1872,20 @@ function rfRenderQuestions(){
   const counter = document.getElementById('rfQCounter');
 
   const pendingCats = rfCategoryBank.filter(c=>c.items.length);
+  const budgetLeft = rfRevealed.length < RF_MAX_QUESTIONS;
   catSelect.innerHTML = '<option value="">Elige una categoría…</option>' +
-    pendingCats.map(c=>'<option value="'+c.key+'">'+c.label+' ('+c.items.length+')</option>').join('');
-  catSelect.disabled = !pendingCats.length;
+    pendingCats.map(c=>'<option value="'+c.key+'">'+c.label+'</option>').join('');
+  catSelect.disabled = !pendingCats.length || !budgetLeft;
 
   const activeCat = pendingCats.find(c=>c.key === rfActiveCategoryKey);
-  if(activeCat){
+  if(activeCat && budgetLeft){
     itemSelect.disabled = false;
     itemSelect.innerHTML = '<option value="">Elige una pregunta…</option>' +
       activeCat.items.map((it,idx)=>'<option value="'+idx+'">'+it.text+'</option>').join('');
     catSelect.value = activeCat.key;
   } else {
     itemSelect.disabled = true;
-    itemSelect.innerHTML = '<option value="">'+(pendingCats.length ? 'Elige una categoría primero' : 'Sin más pistas')+'</option>';
+    itemSelect.innerHTML = '<option value="">'+(!budgetLeft ? 'Ya usaste tus 10 preguntas' : (pendingCats.length ? 'Elige una categoría primero' : 'Sin más pistas'))+'</option>';
     catSelect.value = '';
   }
 
@@ -1912,6 +1904,7 @@ function rfRenderQuestions(){
   counter.textContent = 'Preguntas usadas: ' + rfRevealed.length + '/' + RF_MAX_QUESTIONS;
 }
 function rfRevealItem(catKey, idx){
+  if(rfRevealed.length >= RF_MAX_QUESTIONS) return;
   const cat = rfCategoryBank.find(c=>c.key === catKey);
   if(!cat) return;
   const [item] = cat.items.splice(idx, 1);
@@ -1920,6 +1913,7 @@ function rfRevealItem(catKey, idx){
   rfRenderQuestions();
 }
 function rfAutoRevealOnFail(){
+  if(rfRevealed.length >= RF_MAX_QUESTIONS) return;
   const withItems = rfCategoryBank.filter(c=>c.items.length);
   if(!withItems.length) return;
   const cat = withItems[Math.floor(Math.random()*withItems.length)];
