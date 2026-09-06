@@ -73,6 +73,8 @@ const EXCLUDE_TITLE_PATTERNS = [
   /especial \d+ ?k/i, /lo mejor del/i, /\btop \d+\b/i, /ranking/i,
   /opening.*espa[ñn]ol latino/i, /cover.*opening/i, /unboxing/i, /haul\b/i,
   /pregúntame|preguntame/i, /mi historia/i, /q&a/i,
+  /reto del espejo/i, /mirror challenge/i, /reto viral/i, /challenge\b/i,
+  /probando (filtros|efectos)/i, /detrás de c[aá]maras/i, /making of/i,
 ];
 
 // Diccionario simple para inferir la referencia (anime / videojuego / serie o
@@ -156,17 +158,31 @@ async function getVideosDetails(ids) {
   const out = [];
   for (let i = 0; i < ids.length; i += 50) {
     const chunk = ids.slice(i, i + 50);
-    const data = await apiGet('videos', { part: 'snippet,statistics', id: chunk.join(',') });
+    const data = await apiGet('videos', { part: 'snippet,statistics,contentDetails', id: chunk.join(',') });
     out.push(...(data.items || []));
     await sleep(60);
   }
   return out;
 }
 
+// Convierte una duración ISO 8601 (ej. "PT1M32S") a segundos totales.
+function parseDurationSeconds(iso) {
+  const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso || '');
+  if (!m) return 0;
+  const h = parseInt(m[1] || '0', 10);
+  const min = parseInt(m[2] || '0', 10);
+  const s = parseInt(m[3] || '0', 10);
+  return h * 3600 + min * 60 + s;
+}
+
+const MIN_DURATION_SECONDS = 60; // descarta shorts, teasers, intros, etc.
+
 function isSong(video) {
   const snip = video.snippet;
   if (snip.liveBroadcastContent && snip.liveBroadcastContent !== 'none') return false;
   if (snip.categoryId !== '10') return false; // 10 = Música
+  const duration = parseDurationSeconds(video.contentDetails && video.contentDetails.duration);
+  if (duration > 0 && duration < MIN_DURATION_SECONDS) return false; // shorts/teasers/intros
   const title = snip.title || '';
   if (EXCLUDE_TITLE_PATTERNS.some(rx => rx.test(title))) return false;
   return true;
@@ -206,6 +222,7 @@ async function main() {
           channelName: ch.name,
           group: ch.group,
           views: parseInt((v.statistics && v.statistics.viewCount) || '0', 10),
+          durationSeconds: parseDurationSeconds(v.contentDetails && v.contentDetails.duration),
           publishedAt: v.snippet.publishedAt,
           year: new Date(v.snippet.publishedAt).getFullYear(),
           url: `https://www.youtube.com/watch?v=${v.id}`,
