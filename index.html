@@ -2162,7 +2162,14 @@ document.getElementById('rfModalNextDiffBtn').addEventListener('click', ()=>{
 document.getElementById('rfModalDiffBtn').addEventListener('click', ()=>{ rfCloseResultModal(); rfHideResultLockNote(); rfShowScreen('diff'); });
 document.getElementById('rfModalMenuBtn').addEventListener('click', ()=>{ rfCloseResultModal(); rfHideResultLockNote(); rfShowScreen('category'); });
 document.getElementById('rfModalCloseBtn').addEventListener('click', ()=>{ rfCloseResultModal(); rfHideResultLockNote(); });
-document.getElementById('rfReopenModalBtn').addEventListener('click', rfOpenResultModal);
+document.getElementById('rfReopenModalBtn').addEventListener('click', ()=>{
+  if(rfMode === 'libre'){
+    document.getElementById('rfStreakModal').classList.remove('hidden');
+  } else {
+    rfShowResultLockNote();
+    rfOpenResultModal();
+  }
+});
 document.getElementById('rfResultModal').addEventListener('click', (e)=>{ if(e.target.id==='rfResultModal'){ rfCloseResultModal(); rfHideResultLockNote(); } });
 
 document.getElementById('rfStreakCloseBtn').addEventListener('click', ()=>{ document.getElementById('rfStreakModal').classList.add('hidden'); });
