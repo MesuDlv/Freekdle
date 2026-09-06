@@ -1,9 +1,12 @@
-name: Actualizar catálogo de REFDLE (YouTube)
+name: Actualizar catálogo de RAPDLE (YouTube)
 
 on:
   schedule:
     - cron: '0 6 * * *'   # todos los días a las 6:00 UTC (~1:00 am Colombia)
   workflow_dispatch: {}    # botón "Run workflow" manual en GitHub
+
+permissions:
+  contents: write   # necesario para que el Action pueda hacer git push
 
 jobs:
   update-catalog:
@@ -27,5 +30,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/youtube-catalog.json
-          git diff --cached --quiet || git commit -m "Actualizar catálogo de REFDLE (YouTube)"
+          git diff --cached --quiet || git commit -m "Actualizar catálogo de RAPDLE (YouTube)"
           git push
