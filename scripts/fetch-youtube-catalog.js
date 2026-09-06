@@ -154,6 +154,22 @@ async function getAllVideoIds(playlistId) {
   return ids;
 }
 
+// La playlist especial "uploads" de un canal a veces deja de reflejar los
+// videos más recientes (bug conocido de la API de YouTube en canales activos).
+// Como respaldo, siempre traemos también los últimos 50 videos vía search.list
+// ordenados por fecha, y los combinamos con lo anterior sin duplicar.
+async function getRecentVideoIdsViaSearch(channelId) {
+  try {
+    const data = await apiGet('search', {
+      part: 'id', channelId, order: 'date', type: 'video', maxResults: '50',
+    });
+    return (data.items || []).map(it => it.id && it.id.videoId).filter(Boolean);
+  } catch (e) {
+    console.error('  (aviso) search.list de respaldo falló:', e.message);
+    return [];
+  }
+}
+
 async function getVideosDetails(ids) {
   const out = [];
   for (let i = 0; i < ids.length; i += 50) {
@@ -214,7 +230,9 @@ async function main() {
   for (const ch of CHANNELS) {
     try {
       const resolved = await resolveChannel(ch);
-      const ids = await getAllVideoIds(resolved.uploadsPlaylistId);
+      const uploadsIds = await getAllVideoIds(resolved.uploadsPlaylistId);
+      const recentIds = await getRecentVideoIdsViaSearch(resolved.channelId);
+      const ids = [...new Set([...uploadsIds, ...recentIds])];
       const videos = await getVideosDetails(ids);
       let count = 0;
       for (const v of videos) {
