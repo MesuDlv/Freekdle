@@ -82,26 +82,35 @@ const EXCLUDE_TITLE_PATTERNS = [
 // palabras clave — si detectas una mala clasificación, agrega la palabra
 // clave que falta o crea una excepción manual por ID.
 const REF_KEYWORDS = {
-  anime: [
-    'naruto','dragon ball','dbz','bleach','one piece','onepiece','jujutsu','jjk',
-    'blue lock','bluelock','kimetsu','demon slayer','shingeki','attack on titan',
-    'boku no hero','mha','my hero academia','fairy tail','nanatsu','seven deadly sins',
-    'tokyo ghoul','death note','hunter x hunter','hxh','chainsaw man','sword art online',
-    'sao','dorohedoro','mob psycho','record of ragnarok','dr stone','black clover',
-    'darling in the franxx','one punch man','opm','baki','vinland saga','jojo',
-    'tate no yuusha','dorohedoro','spy x family','solo leveling','oshi no ko',
-  ],
-  videojuego: [
-    'minecraft','fortnite','among us','pokemon','pokémon','sonic','clash royale',
-    'free fire','undertale','fnaf','five nights at freddys','league of legends',
-    'valorant','genshin','zelda','mario','call of duty','gta','roblox','elden ring',
-    'god of war','the last of us','cyberpunk',
-  ],
-  serie_pelicula: [
-    'marvel','avengers','dc comics','stranger things','the boys','arcane',
-    'walking dead','breaking bad','star wars','harry potter','squid game',
-    'wednesday','spiderman','spider-man','batman','joker',
-  ],
+  anime: {
+    'naruto':'Naruto', 'dragon ball':'Dragon Ball', 'dbz':'Dragon Ball Z', 'bleach':'Bleach',
+    'one piece':'One Piece', 'onepiece':'One Piece', 'jujutsu':'Jujutsu Kaisen', 'jjk':'Jujutsu Kaisen',
+    'blue lock':'Blue Lock', 'bluelock':'Blue Lock', 'kimetsu':'Kimetsu no Yaiba', 'demon slayer':'Demon Slayer',
+    'shingeki':'Shingeki no Kyojin', 'attack on titan':'Attack on Titan', 'boku no hero':'Boku no Hero Academia',
+    'mha':'My Hero Academia', 'my hero academia':'My Hero Academia', 'fairy tail':'Fairy Tail',
+    'nanatsu':'Nanatsu no Taizai', 'seven deadly sins':'Seven Deadly Sins', 'tokyo ghoul':'Tokyo Ghoul',
+    'death note':'Death Note', 'hunter x hunter':'Hunter x Hunter', 'hxh':'Hunter x Hunter',
+    'chainsaw man':'Chainsaw Man', 'sword art online':'Sword Art Online', 'sao':'Sword Art Online',
+    'dorohedoro':'Dorohedoro', 'mob psycho':'Mob Psycho 100', 'record of ragnarok':'Record of Ragnarok',
+    'dr stone':'Dr. Stone', 'black clover':'Black Clover', 'darling in the franxx':'Darling in the Franxx',
+    'one punch man':'One Punch Man', 'opm':'One Punch Man', 'baki':'Baki', 'vinland saga':'Vinland Saga',
+    'jojo':"JoJo's Bizarre Adventure", 'tate no yuusha':'The Rising of the Shield Hero',
+    'spy x family':'Spy x Family', 'solo leveling':'Solo Leveling', 'oshi no ko':'Oshi no Ko',
+  },
+  videojuego: {
+    'minecraft':'Minecraft', 'fortnite':'Fortnite', 'among us':'Among Us', 'pokemon':'Pokémon', 'pokémon':'Pokémon',
+    'sonic':'Sonic', 'clash royale':'Clash Royale', 'free fire':'Free Fire', 'undertale':'Undertale',
+    'fnaf':'Five Nights at Freddy\'s', 'five nights at freddys':'Five Nights at Freddy\'s',
+    'league of legends':'League of Legends', 'valorant':'Valorant', 'genshin':'Genshin Impact',
+    'zelda':'Zelda', 'mario':'Mario', 'call of duty':'Call of Duty', 'gta':'GTA', 'roblox':'Roblox',
+    'elden ring':'Elden Ring', 'god of war':'God of War', 'the last of us':'The Last of Us', 'cyberpunk':'Cyberpunk 2077',
+  },
+  serie_pelicula: {
+    'marvel':'Marvel', 'avengers':'Avengers', 'dc comics':'DC Comics', 'stranger things':'Stranger Things',
+    'the boys':'The Boys', 'arcane':'Arcane', 'walking dead':'The Walking Dead', 'breaking bad':'Breaking Bad',
+    'star wars':'Star Wars', 'harry potter':'Harry Potter', 'squid game':'Squid Game', 'wednesday':'Wednesday',
+    'spiderman':'Spider-Man', 'spider-man':'Spider-Man', 'batman':'Batman', 'joker':'Joker',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -216,10 +225,12 @@ function isSong(video) { return getExcludeReason(video) === null; }
 
 function inferReference(video) {
   const text = norm((video.snippet.title || '') + ' ' + (video.snippet.description || ''));
-  for (const [type, words] of Object.entries(REF_KEYWORDS)) {
-    if (words.some(w => text.includes(norm(w)))) return type;
+  for (const [type, dict] of Object.entries(REF_KEYWORDS)) {
+    for (const [keyword, label] of Object.entries(dict)) {
+      if (text.includes(norm(keyword))) return { category: type, franchise: label };
+    }
   }
-  return null;
+  return { category: null, franchise: null };
 }
 
 function bestThumbnail(thumbs) {
@@ -243,6 +254,7 @@ async function main() {
         if (MANUAL_EXCLUDE_IDS.includes(v.id)) continue;
         const reason = getExcludeReason(v);
         if (reason) { reasonCounts[reason] = (reasonCounts[reason] || 0) + 1; continue; }
+        const ref = inferReference(v);
         catalog.push({
           id: v.id,
           title: v.snippet.title,
@@ -256,7 +268,8 @@ async function main() {
           publishedAt: v.snippet.publishedAt,
           year: new Date(v.snippet.publishedAt).getFullYear(),
           url: `https://www.youtube.com/watch?v=${v.id}`,
-          reference: inferReference(v),
+          reference: ref.category,
+          franchise: ref.franchise,
           country: resolved.country,
         });
         count++;
