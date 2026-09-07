@@ -1789,7 +1789,7 @@ function rfBuildQuestionCategories(video, pool, isIndividualArtistMode){
     });
   }
 
-  // Referencia / temática
+  // Referencia / temática (categoría general)
   const refLabels = { anime:'un anime', videojuego:'un videojuego', serie_pelicula:'una serie o película', ninguna:'ninguna referencia (es original)' };
   cats.push({
     key:'referencia', label:'Referencia / temática',
@@ -1798,6 +1798,17 @@ function rfBuildQuestionCategories(video, pool, isIndividualArtistMode){
       answer: key === 'ninguna' ? !video.reference : video.reference === key
     }))
   });
+
+  // Franquicia/personaje específico (ej. "¿Es de Blue Lock?", "¿Es de Naruto?")
+  // detectado por palabras clave del título/descripción — no es un dato real
+  // de YouTube, es una inferencia de texto igual que la categoría anterior.
+  const franchises = [...new Set(pool.map(v=>v.franchise).filter(Boolean))].sort();
+  if(franchises.length){
+    cats.push({
+      key:'franquicia', label:'Franquicia / personaje',
+      items: franchises.map(f=>({ text:'¿Es de '+f+'?', answer: video.franchise === f }))
+    });
+  }
 
   // Año de publicación — todos los años presentes en el catálogo filtrado
   const years = [...new Set(pool.map(v=>v.year).filter(Boolean))].sort();
