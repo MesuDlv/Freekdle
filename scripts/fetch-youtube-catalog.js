@@ -103,16 +103,61 @@ const REF_KEYWORDS = {
     'hunter x hunter':'Hunter x Hunter', 'hxh':'Hunter x Hunter', 'gon freecss':'Hunter x Hunter', 'killua zoldyck':'Hunter x Hunter',
     'chainsaw man':'Chainsaw Man', 'denji':'Chainsaw Man', 'makima':'Chainsaw Man', 'pochita':'Chainsaw Man',
     'sword art online':'Sword Art Online', 'sao':'Sword Art Online', 'kirito':'Sword Art Online',
-    'dorohedoro':'Dorohedoro', 'mob psycho':'Mob Psycho 100', 'record of ragnarok':'Record of Ragnarok',
+    'dorohedoro':'Dorohedoro', 'mob psycho':'Mob Psycho 100',
+    // Record of Ragnarok / Shuumatsu no Valkyrie — variantes de escritura y
+    // personajes propios de la serie que no son ambiguos por sí solos.
+    // Los dioses/humanos genéricos (Zeus, Poseidón, Thor, Buda, Hércules) se
+    // manejan aparte más abajo con una regla combinada (ver rfRecordOfRagnarokCombo).
+    'record of ragnarok':'Record of Ragnarok',
     'shuumatsu no valkyrie':'Record of Ragnarok', 'shumatsu no valkyrie':'Record of Ragnarok',
     'shuumatsu no valkirye':'Record of Ragnarok', 'shumatsu no valkirye':'Record of Ragnarok',
-    'shuumatsu no walkure':'Record of Ragnarok', 'brunhilde':'Record of Ragnarok', 'brunilda':'Record of Ragnarok',
+    'shuumatsu no walkure':'Record of Ragnarok', 'shumatsu no walkure':'Record of Ragnarok',
+    'valkiria ragnarok':'Record of Ragnarok', 'brunhilde':'Record of Ragnarok', 'brunilda':'Record of Ragnarok',
+    'sasaki kojiro':'Record of Ragnarok', 'lu bu ragnarok':'Record of Ragnarok',
     'dr stone':'Dr. Stone', 'black clover':'Black Clover', 'asta black clover':'Black Clover',
     'darling in the franxx':'Darling in the Franxx', 'one punch man':'One Punch Man', 'opm':'One Punch Man', 'saitama':'One Punch Man',
     'baki hanma':'Baki', 'yujiro hanma':'Baki', 'vinland saga':'Vinland Saga', 'thorfinn':'Vinland Saga',
     'jojo bizarre':'JoJo\'s Bizarre Adventure', 'jotaro kujo':'JoJo\'s Bizarre Adventure', 'dio brando':'JoJo\'s Bizarre Adventure',
     'tate no yuusha':'The Rising of the Shield Hero', 'spy x family':'Spy x Family', 'anya forger':'Spy x Family',
     'solo leveling':'Solo Leveling', 'sung jinwoo':'Solo Leveling', 'oshi no ko':'Oshi no Ko',
+    'dandadan':'Dandadan', 'kaiju no 8':'Kaiju No. 8', 'mashle':'Mashle',
+    'hells paradise':'Hell\'s Paradise', 'jigokuraku':'Hell\'s Paradise',
+    'berserk':'Berserk', 'guts berserk':'Berserk', 'fullmetal alchemist':'Fullmetal Alchemist', 'edward elric':'Fullmetal Alchemist',
+    'evangelion':'Neon Genesis Evangelion', 'shinji ikari':'Neon Genesis Evangelion',
+    'code geass':'Code Geass', 'lelouch':'Code Geass', 're zero':'Re:Zero', 'subaru natsuki':'Re:Zero',
+    'overlord anime':'Overlord', 'ainz ooal gown':'Overlord', 'konosuba':'Konosuba',
+    'tensei slime':'That Time I Got Reincarnated as a Slime', 'rimuru tempest':'That Time I Got Reincarnated as a Slime',
+    'toilet bound hanako':'Toilet-Bound Hanako-kun', 'kaguya sama':'Kaguya-sama: Love Is War',
+    'haikyuu':'Haikyu!!', 'kuroko no basket':'Kuroko no Basket', 'inazuma eleven':'Inazuma Eleven',
+    'yu gi oh':'Yu-Gi-Oh!', 'digimon':'Digimon', 'beyblade':'Beyblade', 'inuyasha':'Inuyasha',
+    'fruits basket':'Fruits Basket', 'promised neverland':'The Promised Neverland', 'made in abyss':'Made in Abyss',
+    'iruma kun':'Mairimashita! Iruma-kun', 'mairimashita iruma':'Mairimashita! Iruma-kun', 'iruma suzuki':'Mairimashita! Iruma-kun',
+    // Series de "recopilación" que mezclan varios animes en una sola canción
+    // (no pertenecen a un solo show, pero sí son claramente de anime).
+    'desamor en anime':'Varios animes (recopilación)',
+    'violet evergarden':'Violet Evergarden', 'assassination classroom':'Assassination Classroom', 'koro sensei':'Assassination Classroom',
+    // Romcoms — género muy común entre estos raperos y que antes casi no estaba cubierto.
+    'kaguya sama':'Kaguya-sama: Love Is War', 'kaguya shinomiya':'Kaguya-sama: Love Is War', 'miyuki shirogane':'Kaguya-sama: Love Is War',
+    'toradora':'Toradora!', 'taiga aisaka':'Toradora!', 'ryuuji takasu':'Toradora!',
+    'oregairu':'Oregairu', 'yahari ore no seishun':'Oregairu', 'hachiman hikigaya':'Oregairu',
+    'horimiya':'Horimiya', 'kyoko hori':'Horimiya', 'izumi miyamura':'Horimiya',
+    'tonikaku kawaii':'Tonikaku Kawaii', 'tonikawa':'Tonikaku Kawaii', 'tsukasa tonikawa':'Tonikaku Kawaii',
+    'kanojo okarishimasu':'Rent-a-Girlfriend', 'rent a girlfriend':'Rent-a-Girlfriend', 'chizuru mizuhara':'Rent-a-Girlfriend',
+    'nisekoi':'Nisekoi', 'chitoge kirisaki':'Nisekoi', 'raku ichijo':'Nisekoi',
+    'nagatoro':"Don't Toy with Me, Miss Nagatoro",
+    'komi san':"Komi Can't Communicate", 'komi shouko':"Komi Can't Communicate",
+    'sono bisque doll':'My Dress-Up Darling', 'dress up darling':'My Dress-Up Darling', 'marin kitagawa':'My Dress-Up Darling',
+    'uzaki chan':'Uzaki-chan Wants to Hang Out!',
+    'wotakoi':'Wotakoi', 'wotaku ni koi':'Wotakoi',
+    'domestic na kanojo':'Domestic Girlfriend', 'domestic girlfriend':'Domestic Girlfriend',
+    'couple of cuckoos':'A Couple of Cuckoos',
+    'yabai yatsu':'The Dangers in My Heart', 'dangers in my heart':'The Dangers in My Heart', 'kyoutarou ichikawa':'The Dangers in My Heart',
+    'tomo chan wa onnanoko':'Tomo-chan Is a Girl!',
+    'shikimori':"Shikimori's Not Just a Cutie",
+    'yamada kun to 7 nin':'Yamada-kun and the Seven Witches',
+    'kimi ni todoke':'Kimi ni Todoke', 'sawako kuronuma':'Kimi ni Todoke',
+    'gotoubun no hanayome':'The Quintessential Quintuplets', 'quintessential quintuplets':'The Quintessential Quintuplets', 'nakano itsuki':'The Quintessential Quintuplets',
+    'kanokari':'Rent-a-Girlfriend', 'oshi no ko ai':'Oshi no Ko',
   },
   videojuego: {
     'minecraft':'Minecraft', 'fortnite':'Fortnite', 'among us':'Among Us', 'pokemon':'Pokémon', 'pokémon':'Pokémon',
@@ -130,6 +175,31 @@ const REF_KEYWORDS = {
     'star wars':'Star Wars', 'harry potter':'Harry Potter', 'squid game':'Squid Game', 'wednesday addams':'Wednesday',
     'spiderman':'Spider-Man', 'spider-man':'Spider-Man', 'batman':'Batman', 'joker':'Joker',
   },
+};
+
+// Nombres de dioses/humanos de Record of Ragnarok que son demasiado genéricos
+// para mapearse solos (Zeus, Poseidón, etc. se usan en mil contextos que no
+// tienen nada que ver con el anime). Solo cuentan como Record of Ragnarok si
+// aparecen JUNTO a alguna otra palabra propia de la serie (ragnarok, valkyrie,
+// valkiria, dioses vs humanos) en el mismo título/descripción — sin importar
+// el orden ni si están separados por otras palabras.
+const RAGNAROK_GENERIC_NAMES = ['zeus', 'poseidon', 'poseidón', 'thor', 'hercules', 'hércules', 'buda', 'adan', 'adán', 'shiva', 'jack the ripper'];
+const RAGNAROK_CONTEXT_WORDS = ['ragnarok', 'valkyrie', 'valkiria', 'shuumatsu', 'shumatsu'];
+function isRecordOfRagnarokByContext(text) {
+  const hasGenericGod = RAGNAROK_GENERIC_NAMES.some(n => text.includes(norm(n)));
+  const hasContext = RAGNAROK_CONTEXT_WORDS.some(w => text.includes(norm(w)));
+  return hasGenericGod && hasContext;
+}
+
+// Corrección manual por video: para cuando el detector automático de
+// franquicia se equivoca en un caso puntual (anime poco conocido que no está
+// en el diccionario, título ambiguo, etc). Agrega aquí el ID del video con la
+// categoría ('anime' | 'videojuego' | 'serie_pelicula') y el nombre exacto que
+// quieres que aparezca como pregunta en el juego. Ejemplo:
+//   'dQw4w9WgXcQ': { category: 'anime', franchise: 'Mashle' },
+// Si el video SÍ es original (no basado en nada), pon franchise: null.
+const MANUAL_FRANCHISE_OVERRIDES = {
+  // 'VIDEO_ID': { category: 'anime', franchise: 'Nombre del anime' },
 };
 
 // ---------------------------------------------------------------------------
@@ -243,7 +313,15 @@ function getExcludeReason(video) {
 function isSong(video) { return getExcludeReason(video) === null; }
 
 function inferReference(video) {
+  // 1. Corrección manual explícita por ID de video — siempre gana.
+  if (MANUAL_FRANCHISE_OVERRIDES[video.id]) return MANUAL_FRANCHISE_OVERRIDES[video.id];
+
   const text = norm((video.snippet.title || '') + ' ' + (video.snippet.description || ''));
+
+  // 2. Regla combinada para los dioses/humanos genéricos de Record of Ragnarok.
+  if (isRecordOfRagnarokByContext(text)) return { category: 'anime', franchise: 'Record of Ragnarok' };
+
+  // 3. Diccionario normal de alias directos.
   for (const [type, dict] of Object.entries(REF_KEYWORDS)) {
     for (const [keyword, label] of Object.entries(dict)) {
       if (text.includes(norm(keyword))) return { category: type, franchise: label };
